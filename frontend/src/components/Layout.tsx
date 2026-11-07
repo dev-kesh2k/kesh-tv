@@ -17,7 +17,7 @@ const NAV = [
 export function Logo() {
   return (
     <div className="flex items-center gap-2.5">
-      <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" className="h-8 w-8" />
+      <img src={`${import.meta.env.BASE_URL}icon.svg?v=2`} alt="" className="h-8 w-8" />
       <span className="font-display text-[1.35rem] leading-none text-slate-100">Kesh TV</span>
     </div>
   );
