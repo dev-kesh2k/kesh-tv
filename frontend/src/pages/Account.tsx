@@ -1,5 +1,5 @@
 import { FormEvent, useState } from 'react';
-import { Eye, LogOut, Trash2, UserPlus } from 'lucide-react';
+import { Download, Eye, LogOut, Smartphone, Trash2, UserPlus } from 'lucide-react';
 import { api, User, useApi } from '../api';
 import { useAuth } from '../auth';
 import { Page } from '../components/Layout';
@@ -97,6 +97,40 @@ interface StatsData {
   hoursWatched: number;
 }
 
+const APK_URL = 'https://github.com/dev-kesh2k/kesh-tv/releases/latest/download/kesh-tv.apk';
+
+/** App Android (celular e Android TV): download no navegador; dentro do app mostra a versão instalada. */
+function AndroidAppSection() {
+  const version = (() => {
+    try {
+      return window.KeshNative?.version?.() || null;
+    } catch {
+      return null;
+    }
+  })();
+  return (
+    <section className={`${card} p-4 sm:p-5`}>
+      <h2 className="flex items-center gap-2 font-semibold">
+        <Smartphone className="h-4 w-4" /> App Android
+      </h2>
+      {platform.app ? (
+        <p className="mt-1 text-sm text-slate-400">
+          Você está no app Android{version ? ` (versão ${version})` : ''}. Para atualizar, baixe a versão mais nova pelo navegador e instale por cima.
+        </p>
+      ) : (
+        <>
+          <p className="mt-1 text-sm text-slate-400">
+            Para celular e Android TV (TV Box, Fire TV, Chromecast com Google TV). No aparelho, permita “instalar apps de fontes desconhecidas”.
+          </p>
+          <a href={APK_URL} className={`${btnPrimary} mt-3`}>
+            <Download className="h-4 w-4" /> Baixar app Android
+          </a>
+        </>
+      )}
+    </section>
+  );
+}
+
 /** Modo TV: automático (pela TV/app) ou forçado ligado/desligado neste aparelho. */
 function TvModeSection() {
   const current = tvModeSetting();
@@ -183,6 +217,8 @@ export default function Account() {
         <Stats />
 
         <TvModeSection />
+
+        <AndroidAppSection />
 
         <form onSubmit={saveName} className={`${card} space-y-3 p-4 sm:p-5`}>
           <h2 className="font-semibold">Perfil</h2>
