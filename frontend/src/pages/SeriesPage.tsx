@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Play } from 'lucide-react';
-import { Channel, Episode, useApi } from '../api';
+import { Channel, Episode, groupLabel, useApi } from '../api';
 import { ChannelLogo, ProgressBar } from '../components/ChannelCard';
 import { Page } from '../components/Layout';
 import { btnPrimary, ErrorBox, Spinner } from '../components/ui';
@@ -22,7 +22,8 @@ function episodeTitle(e: Episode, series: string) {
 
 const fmtClock = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
-const label = (e: Episode) => (e.season || e.episode ? `T${e.season} · E${String(e.episode).padStart(2, '0')}` : '');
+// Convenção dos serviços de streaming: T1:E3.
+const label = (e: Episode) => (e.season || e.episode ? `T${e.season}:E${e.episode}` : '');
 
 export default function SeriesPage() {
   const { playlistId = '' } = useParams();
@@ -53,59 +54,59 @@ export default function SeriesPage() {
 
   return (
     <Page>
-      <button type="button" onClick={() => (window.history.length > 1 ? nav(-1) : nav('/?tipo=series'))} className="-ml-2 mb-3 inline-flex min-h-[44px] items-center gap-2 rounded-xl px-2 text-sm text-slate-400 hover:text-slate-100">
+      <button type="button" onClick={() => (window.history.length > 1 ? nav(-1) : nav('/?tipo=series'))} className="-ml-2 mb-3 inline-flex min-h-[44px] items-center gap-2 rounded-md px-2 text-sm text-slate-400 hover:text-slate-100">
         <ArrowLeft className="h-4 w-4" /> Voltar
       </button>
       <ErrorBox message={error} />
       {data && (
         <>
           <div className="flex gap-4 sm:gap-6">
-            <ChannelLogo channel={poster} className="aspect-[3/4] w-28 shrink-0 rounded-2xl sm:w-40" />
+            <ChannelLogo channel={poster} className="aspect-[3/4] w-28 shrink-0 rounded-[6px] sm:w-40" />
             <div className="min-w-0 flex-1">
-              <h1 className="break-words text-xl font-bold leading-tight sm:text-2xl">{data.name}</h1>
-              <p className="mt-1 text-sm text-slate-400">{data.group}</p>
+              <h1 className="font-display break-words text-[2rem] leading-[1.05] text-slate-100 sm:text-[2.6rem]">{data.name}</h1>
+              <p className="mt-1 text-sm text-slate-400">{groupLabel(data.group, 'series')}</p>
               <p className="mt-1 text-sm text-slate-500">
-                {seasons.length > 1 ? `${seasons.length} temporadas · ` : ''}
-                {data.episodes.length} episódios
+                {seasons.length > 1 ? `${seasons.length} temporadas, ` : ''}
+                {data.episodes.length} {data.episodes.length === 1 ? 'episódio' : 'episódios'}
               </p>
               {(last || first) && (
                 <Link to={`/assistir/${(last || first)!.id}`} className={`${btnPrimary} mt-4`}>
-                  <Play className="h-4 w-4 fill-current" /> {last ? `Continuar ${label(last)}${progressOf.get(last.id)?.position ? ` · ${fmtClock(progressOf.get(last.id)!.position!)}` : ''}` : 'Assistir'}
+                  <Play className="h-4 w-4 fill-current" /> {last ? `Continuar ${label(last)}${progressOf.get(last.id)?.position ? ` (${fmtClock(progressOf.get(last.id)!.position!)})` : ''}` : 'Assistir do início'}
                 </Link>
               )}
             </div>
           </div>
 
           {seasons.length > 1 && (
-            <div className="no-scrollbar -mx-3 mt-6 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:px-0">
+            <nav aria-label="Temporadas" className="no-scrollbar -mx-3 mt-8 flex gap-6 overflow-x-auto border-b border-ink-800 px-3 sm:mx-0 sm:px-0">
               {seasons.map((s) => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => setSeason(s)}
-                  className={`min-h-[40px] shrink-0 rounded-full px-4 text-sm font-semibold ${season === s ? 'bg-brand text-ink-950' : 'bg-ink-800 text-slate-300 hover:bg-ink-700'}`}
+                  aria-pressed={season === s}
+                  className={`font-display -mb-px min-h-[48px] shrink-0 border-b-[3px] text-lg transition-colors ${season === s ? 'border-brand text-slate-100' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
                 >
                   {s ? `Temporada ${s}` : 'Outros'}
                 </button>
               ))}
-            </div>
+            </nav>
           )}
 
-          <ul className="mt-4 divide-y divide-ink-800 overflow-hidden rounded-2xl border border-ink-700/60 bg-ink-900">
+          <ol className="mt-2 divide-y divide-ink-800">
             {eps.map((e) => (
               <li key={e.id}>
-                <Link to={`/assistir/${e.id}`} className={`flex min-h-[56px] items-center gap-3 px-4 py-2.5 transition hover:bg-ink-850 ${last?.id === e.id ? 'bg-brand/10' : ''}`}>
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-ink-800 text-xs font-bold text-slate-300">{e.episode || '•'}</span>
+                <Link to={`/assistir/${e.id}`} className={`flex min-h-[60px] items-center gap-4 border-l-[3px] py-2.5 pl-2 pr-3 transition-colors hover:bg-ink-900 ${last?.id === e.id ? 'border-brand bg-ink-900' : 'border-transparent'}`}>
+                  <span className="font-display w-8 shrink-0 text-right text-xl text-slate-500">{e.episode || ''}</span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{episodeTitle(e, data.name)}</p>
-                    {last?.id === e.id && <p className="text-xs text-brand-light">Último assistido</p>}
+                    <p className="truncate text-[0.95rem] text-slate-100">{episodeTitle(e, data.name)}</p>
+                    {last?.id === e.id && <p className="text-xs text-slate-400">Você parou aqui</p>}
                     {!!progressOf.get(e.id)?.progress && <ProgressBar value={progressOf.get(e.id)!.progress!} className="mt-1.5 overflow-hidden rounded-full" />}
                   </div>
-                  <Play className="h-4 w-4 shrink-0 text-slate-500" />
                 </Link>
               </li>
             ))}
-          </ul>
+          </ol>
         </>
       )}
     </Page>
