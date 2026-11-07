@@ -253,11 +253,21 @@ docs/       prints e imagem de prévia
 | `-PversionName=` / `-PversionCode=` | versão do app |
 | Segredos do GitHub `KESH_KEYSTORE_B64`, `KESH_KEYSTORE_PASSWORD` | assinatura no workflow *APK Android* |
 
-## Observações
+## Solução de problemas
 
-- A conversão guarda as sessões na memória do processo: rode o backend com **1 réplica**.
-- Limites: 300 MB / 15 min por lista; até 4 conversões simultâneas (2 recodificando vídeo).
-- Use apenas listas e conteúdos que você tem direito de acessar.
+| Problema | O que fazer |
+| --- | --- |
+| Canal não abre ("Não foi possível abrir este canal") | O player já tentou todas as fontes (direto, servidor, `.m3u8`). Teste o link no VLC (botão *Copiar link*); se lá também falhar, o canal está fora do ar no provedor. |
+| Filme MKV/AVI demora para começar | É a conversão no servidor (~10–20 s; avançar além do que já foi convertido reinicia dali). H.264 comum só é reempacotado. |
+| Canal toca em um aparelho e cai no outro | Planos IPTV costumam permitir uma tela por vez. |
+| Lista "grande demais" ou demorando | Use o link em vez do arquivo (arquivo vai até 95 MB, link até 300 MB). O progresso aparece em **Listas**. |
+| Guia de programação vazio | A lista precisa de `tvg-id` nos canais e de um guia (`url-tvg`/`x-tvg-url` ou servidor Xtream). A situação aparece no cartão da lista. |
+| TV não entrou no modo TV | **Conta → Modo TV → Ligado** (ou `?tv=1`). |
+| TV começa sem som | Navegadores de TV bloqueiam som automático: aperte OK uma vez. No app Android não acontece. |
+| APK novo não instala por cima | Foi assinado com outra chave. Use sempre a mesma (`android/keystore/` ou os segredos do GitHub) ou desinstale a versão antiga. |
+| Pediu login de novo em todos os aparelhos | Normal depois de trocar a senha (os outros aparelhos saem por segurança). |
+
+**Para quem hospeda:** a conversão guarda as sessões na memória do processo — rode o backend com **1 réplica**. Até 4 conversões simultâneas (2 recodificando vídeo); listas com erro são tentadas de novo a cada 6 h.
 
 ## Como as mudanças entram
 
