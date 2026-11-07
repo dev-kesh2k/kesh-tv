@@ -5,6 +5,7 @@ import { prisma, HttpError } from './db.js';
 import { createParser } from './m3u.js';
 import { safeFetch } from './net.js';
 import { EPG_REFRESH_MS, epgUrlFor, syncEpg } from './epg.js';
+import { SERIES_MARK, xtreamCreds, xtreamEpisodes, xtreamItems } from './xtream.js';
 
 const MAX_BYTES = 300 * 1024 * 1024;
 const MAX_ITEMS = 1_000_000;
@@ -54,7 +55,7 @@ async function* download(url, ctrl) {
   }
 }
 
-async function insertBatch(playlistId, items, syncId) {
+export async function insertBatch(playlistId, items, syncId) {
   // A mesma URL duas vezes no mesmo INSERT quebra o ON CONFLICT: fica a última. Entre lotes, o upsert resolve.
   const part = [...new Map(items.map((it) => [it.url, it])).values()];
   const col = (k) => part.map((it) => it[k]);
@@ -71,10 +72,24 @@ async function insertBatch(playlistId, items, syncId) {
       "seriesName"=EXCLUDED."seriesName","season"=EXCLUDED."season","episode"=EXCLUDED."episode","searchName"=EXCLUDED."searchName","syncId"=EXCLUDED."syncId"`;
 }
 
-/** Lê e grava a lista; só apaga os canais que sumiram se a leitura terminou inteira. Devolve contagens e o cabeçalho #EXTM3U. */
-async function importLines(playlistId, lines) {
-  const syncId = crypto.randomUUID();
+/** Itens de um M3U lido linha a linha; o cabeçalho #EXTM3U fica em `header` ao terminar. */
+function m3uItems(lines, header) {
   const parser = createParser({ dedupe: false });
+  return (async function* () {
+    for await (const line of lines) {
+      const it = parser.push(line);
+      if (it) yield it;
+    }
+    Object.assign(header, parser.header);
+  })();
+}
+
+/**
+ * Grava os itens; só apaga os que sumiram se a leitura terminou inteira. Devolve as contagens.
+ * `xtream`: séries vêm como um item só (episódios buscados ao abrir); as que já têm episódios gravados os mantêm.
+ */
+async function importItems(playlistId, items, { xtream = false } = {}) {
+  const syncId = crypto.randomUUID();
   let total = 0;
   let batch = [];
   let lastProgress = Date.now();
@@ -87,9 +102,7 @@ async function importLines(playlistId, lines) {
       await prisma.playlist.update({ where: { id: playlistId }, data: { syncProgress: total } });
     }
   };
-  for await (const line of lines) {
-    const it = parser.push(line);
-    if (!it) continue;
+  for await (const it of items) {
     if (total >= MAX_ITEMS) break;
     it.position = total++;
     batch.push(it);
@@ -97,6 +110,18 @@ async function importLines(playlistId, lines) {
   }
   await flush();
   if (!total) throw new HttpError(422, 'Nenhum canal encontrado. Confira se o arquivo/link é uma lista M3U.');
+  if (xtream) {
+    const mark = `${SERIES_MARK}%`;
+    // Episódios já gravados (de uma leitura anterior) continuam valendo para as séries que ainda existem…
+    await prisma.$executeRaw`
+      UPDATE "Channel" SET "syncId" = ${syncId}
+      WHERE "playlistId" = ${playlistId}::uuid AND "kind" = 'series' AND "syncId" <> ${syncId} AND "tvgId" NOT LIKE ${mark}
+        AND "seriesName" IN (SELECT "seriesName" FROM "Channel" WHERE "playlistId" = ${playlistId}::uuid AND "syncId" = ${syncId} AND "tvgId" LIKE ${mark})`;
+    // …e aí o item provisório dessas séries sai.
+    await prisma.$executeRaw`
+      DELETE FROM "Channel" p WHERE p."playlistId" = ${playlistId}::uuid AND p."syncId" = ${syncId} AND p."tvgId" LIKE ${mark}
+        AND EXISTS (SELECT 1 FROM "Channel" e WHERE e."playlistId" = p."playlistId" AND e."seriesName" = p."seriesName" AND e."tvgId" NOT LIKE ${mark} AND e."kind" = 'series')`;
+  }
   await prisma.$executeRaw`DELETE FROM "Channel" WHERE "playlistId" = ${playlistId}::uuid AND "syncId" <> ${syncId}`;
   const [c] = await prisma.$queryRaw`
     SELECT COUNT(*)::int AS total,
@@ -105,7 +130,44 @@ async function importLines(playlistId, lines) {
            COUNT(DISTINCT COALESCE(NULLIF("seriesName", ''), "name")) FILTER (WHERE "kind" = 'series')::int AS series
     FROM "Channel" WHERE "playlistId" = ${playlistId}::uuid`;
   // seriesCount = número de séries (não de episódios); channelCount = todos os itens.
-  return { counts: { channelCount: c.total, liveCount: c.live, movieCount: c.movie, seriesCount: c.series }, header: parser.header };
+  return { channelCount: c.total, liveCount: c.live, movieCount: c.movie, seriesCount: c.series };
+}
+
+/**
+ * Lê a lista: o arquivo enviado, ou o link. Link Xtream (get.php) que falhar — provedores bloqueiam o M3U,
+ * devolvem 404 ou cortam no meio — é lido pela API do painel (player_api.php).
+ */
+async function readPlaylist(playlistId, pl, source) {
+  const header = {};
+  if (source != null) return { counts: await importItems(playlistId, m3uItems(linesOf(source), header)), header };
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(new Error('timeout')), TOTAL_TIMEOUT);
+  try {
+    return { counts: await importItems(playlistId, m3uItems(linesOf(download(pl.url, ctrl)), header)), header };
+  } catch (err) {
+    const xc = xtreamCreds(pl.url);
+    if (!xc || err?.status === 413) throw abortMessage(ctrl, err);
+    console.warn('sync', playlistId, 'M3U falhou, tentando a API Xtream:', abortMessage(ctrl, err).message);
+  } finally {
+    clearTimeout(timer);
+  }
+  const ctrl2 = new AbortController();
+  const timer2 = setTimeout(() => ctrl2.abort(new Error('timeout')), TOTAL_TIMEOUT);
+  try {
+    return { counts: await importItems(playlistId, xtreamItems(xtreamCreds(pl.url), ctrl2.signal), { xtream: true }), header };
+  } catch (err) {
+    throw abortMessage(ctrl2, err);
+  } finally {
+    clearTimeout(timer2);
+  }
+}
+
+/** Erro com a mensagem certa quando a leitura foi cortada pelo tempo. */
+function abortMessage(ctrl, err) {
+  if (ctrl.signal.aborted) {
+    return new HttpError(504, ctrl.signal.reason?.message === 'idle' ? 'O servidor da lista parou de enviar dados' : 'O download da lista passou de 15 minutos');
+  }
+  return err;
 }
 
 /**
@@ -122,24 +184,19 @@ export async function startSync(playlistId, source) {
   });
   if (!claimed.count) throw new HttpError(409, 'Esta lista já está sendo atualizada');
   const done = (async () => {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(new Error('timeout')), TOTAL_TIMEOUT);
     try {
-      const { counts, header } = await importLines(playlistId, linesOf(source ?? download(pl.url, ctrl)));
+      const { counts, header } = await readPlaylist(playlistId, pl, source);
       const epgUrl = epgUrlFor(pl.url, header);
       const saved = await prisma.playlist.update({ where: { id: playlistId }, data: { ...counts, epgUrl, status: 'ok', error: null, syncedAt: new Date(), syncStarted: null } });
       // Guia de programação em segundo plano (não segura a lista).
       if (epgUrl) syncEpg(playlistId).catch(() => {});
       return saved;
     } catch (err) {
-      let message = err instanceof HttpError ? err.message : 'Falha ao ler a lista';
-      if (ctrl.signal.aborted) message = ctrl.signal.reason?.message === 'idle' ? 'O servidor da lista parou de enviar dados' : 'O download da lista passou de 15 minutos';
-      else if (!(err instanceof HttpError)) console.error('sync', playlistId, err);
+      const message = err instanceof HttpError ? err.message : 'Falha ao ler a lista';
+      if (!(err instanceof HttpError)) console.error('sync', playlistId, err);
       // syncStarted fica com a hora da tentativa: a atualização automática espera 6 h antes de tentar de novo.
       await prisma.playlist.update({ where: { id: playlistId }, data: { status: 'error', error: message, syncStarted: new Date() } }).catch(() => {});
       throw new HttpError(err instanceof HttpError ? err.status : 500, message);
-    } finally {
-      clearTimeout(timer);
     }
   })();
   done.catch(() => {});
@@ -180,4 +237,28 @@ export function startAutoRefresh() {
   };
   setTimeout(tick, 60_000 + Math.random() * 60_000);
   setInterval(tick, 30 * 60_000).unref();
+}
+
+/**
+ * Série importada pela API Xtream ainda sem episódios: busca no provedor (get_series_info) e grava no lugar do
+ * item provisório, na mesma posição. Pedidos simultâneos da mesma série esperam o mesmo resultado.
+ */
+const expanding = new Map();
+export function expandXtreamSeries(pl, placeholder) {
+  const key = placeholder.id;
+  if (!expanding.has(key)) {
+    const job = (async () => {
+      const c = xtreamCreds(pl.url);
+      const row = await prisma.channel.findUnique({ where: { id: placeholder.id }, select: { url: true, syncId: true, position: true, seriesName: true, groupTitle: true, logo: true, tvgId: true } });
+      if (!c || !row?.tvgId?.startsWith(SERIES_MARK)) return;
+      const root = row.url.slice(0, row.url.indexOf('/series/'));
+      const eps = await xtreamEpisodes(c, row.tvgId.slice(SERIES_MARK.length), { root, seriesName: row.seriesName, group: row.groupTitle, logo: row.logo });
+      if (!eps.length) throw new HttpError(404, 'O provedor não tem episódios desta série');
+      for (const e of eps) e.position = row.position;
+      for (let i = 0; i < eps.length; i += BATCH) await insertBatch(pl.id, eps.slice(i, i + BATCH), row.syncId || '');
+      await prisma.channel.delete({ where: { id: placeholder.id } }).catch(() => {});
+    })().finally(() => expanding.delete(key));
+    expanding.set(key, job);
+  }
+  return expanding.get(key);
 }
