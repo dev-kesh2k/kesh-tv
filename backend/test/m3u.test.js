@@ -57,3 +57,11 @@ test('episódios de série ganham seriesName/season/episode', () => {
   assert.equal(it.season, 2);
   assert.equal(it.episode, 3);
 });
+
+test('busca sem acentos: nome normalizado', async () => {
+  const { normalizeSearch } = await import('../src/m3u.js');
+  assert.equal(normalizeSearch('A Força do Amor'), 'a forca do amor');
+  assert.equal(normalizeSearch('AÇÃO Ñandú'), 'acao nandu');
+  const [it] = parseM3U('#EXTINF:-1,Canal Ação\nhttp://a/1.ts\n');
+  assert.equal(it.searchName, 'canal acao');
+});

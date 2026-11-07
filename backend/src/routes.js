@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { prisma, HttpError } from './db.js';
 import { signToken, publicUser, requireAuth, tooManyAttempts, recordFailure, clearFailures } from './auth.js';
 import { startSync } from './sync.js';
+import { normalizeSearch } from './m3u.js';
 import { cleanSeconds, resumePoint, watchedFraction } from './progress.js';
 import { buildExport, parseImport } from './favorites-io.js';
 import { channelGuide, nowNext } from './epg.js';
@@ -294,7 +295,7 @@ api.get('/channels', wrap(async (req, res) => {
   where.kind = !q || req.query.kind ? kindOf(req.query.kind) : { not: 'series' };
   if (req.query.group !== undefined && req.query.group !== '__all') where.groupTitle = String(req.query.group);
   else if (req.user.hiddenGroups?.length) where.groupTitle = { notIn: req.user.hiddenGroups };
-  if (q) where.name = { contains: q, mode: 'insensitive' };
+  if (q) where.searchName = { contains: normalizeSearch(q) };
   const rows = await prisma.channel.findMany({ where, select: channelSelect, orderBy: [{ playlistId: 'asc' }, { position: 'asc' }], skip: offset, take: limit + 1 });
   res.json({ channels: await decorate(req.user.id, rows.slice(0, limit)), hasMore: rows.length > limit });
 }));
@@ -371,7 +372,7 @@ api.get('/series', wrap(async (req, res) => {
   const group = req.query.group !== undefined && req.query.group !== '__all' ? String(req.query.group) : null;
   const q = text(req.query.q, 'Busca', { max: 100 });
   if (!ids.length) return res.json({ series: [], hasMore: false });
-  const like = q ? `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%` : null;
+  const like = q ? `%${normalizeSearch(q).replace(/[\\%_]/g, (c) => `\\${c}`)}%` : null;
   const rows = await prisma.$queryRaw`
     SELECT "playlistId", COALESCE(NULLIF("seriesName", ''), "name") AS name, MIN("groupTitle") AS "group",
            MIN(NULLIF("logo", '')) AS logo, COUNT(*)::int AS episodes, COUNT(DISTINCT "season")::int AS seasons, MIN("position") AS pos
@@ -379,7 +380,7 @@ api.get('/series', wrap(async (req, res) => {
     WHERE "playlistId" = ANY(${ids}::uuid[]) AND "kind" = 'series'
       AND (${group}::text IS NULL OR "groupTitle" = ${group}::text)
       AND NOT ("groupTitle" = ANY(${req.user.hiddenGroups || []}::text[]))
-      AND (${like}::text IS NULL OR COALESCE(NULLIF("seriesName", ''), "name") ILIKE ${like}::text)
+      AND (${like}::text IS NULL OR "searchName" LIKE ${like}::text)
     GROUP BY "playlistId", COALESCE(NULLIF("seriesName", ''), "name")
     ORDER BY pos LIMIT ${limit + 1} OFFSET ${offset}`;
   res.json({
