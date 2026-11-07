@@ -23,7 +23,7 @@ function AddForm({ onDone, onCancel }: { onDone: () => void; onCancel?: () => vo
       if (mode === 'url') await api.post('playlists', { name, url });
       else {
         if (!file) throw new Error('Escolha o arquivo .m3u');
-        if (file.size > 80 * 1024 * 1024) throw new Error('Arquivo grande demais (máx. 80 MB)');
+        if (file.size > 95 * 1024 * 1024) throw new Error('Arquivo grande demais (máx. 95 MB). Use o link da lista.');
         await api.upload(`playlists/upload?name=${encodeURIComponent(name || file.name.replace(/\.m3u8?$/i, ''))}`, file);
       }
       onDone();
@@ -126,7 +126,7 @@ function PlaylistCard({ pl, onChanged }: { pl: Playlist; onChanged: () => void }
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
         {syncing ? (
           <span className="flex items-center gap-1.5 text-amber-300">
-            <Loader2 className="h-4 w-4 animate-spin" /> Importando canais…
+            <Loader2 className="h-4 w-4 animate-spin" /> {pl.syncProgress ? `Importando… ${fmt(pl.syncProgress)} itens` : pl.url ? 'Baixando a lista… (listas grandes levam alguns minutos)' : 'Importando…'}
           </span>
         ) : pl.status === 'error' ? (
           <span className="flex items-start gap-1.5 text-red-300">

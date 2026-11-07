@@ -3,7 +3,8 @@ import { AlertTriangle, Loader2, RotateCcw, VolumeX } from 'lucide-react';
 import { apiUrl, Source } from '../api';
 
 type Engine = { destroy: () => void };
-const START_TIMEOUT = 15000;
+// Ao vivo começa rápido; filmes/episódios de Xtream passam por redirecionamento e demoram mais.
+const START_TIMEOUT = { hls: 20000, ts: 20000, flv: 20000, file: 40000 };
 
 const isApple = () => /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
@@ -56,7 +57,7 @@ export function Player({ sources, title, onPlaying }: { sources: Source[]; title
       setDetail(why);
       setIndex((i) => i + 1);
     };
-    const timer = window.setTimeout(() => fail('O canal não respondeu a tempo'), START_TIMEOUT);
+    const timer = window.setTimeout(() => fail('O canal não respondeu a tempo'), START_TIMEOUT[src.type] || 20000);
     const onPlay = () => {
       window.clearTimeout(timer);
       setState('playing');

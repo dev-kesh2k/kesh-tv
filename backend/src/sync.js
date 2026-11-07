@@ -1,95 +1,145 @@
-// Importação das listas: baixa (ou recebe o texto), lê e grava os canais por diferença,
-// mantendo o id dos canais que continuam na lista (favoritos e recentes não se perdem).
+// Importação das listas em fluxo: lê linha a linha enquanto baixa e grava em lotes (listas com centenas de
+// milhares de itens cabem na memória do container). Canais que continuam na lista mantêm o id (favoritos/recentes).
 import crypto from 'node:crypto';
 import { prisma, HttpError } from './db.js';
-import { parseM3U } from './m3u.js';
+import { createParser } from './m3u.js';
 import { safeFetch } from './net.js';
 
-const MAX_BYTES = 80 * 1024 * 1024;
-const MAX_ITEMS = 300_000;
+const MAX_BYTES = 300 * 1024 * 1024;
+const MAX_ITEMS = 1_000_000;
+const TOTAL_TIMEOUT = 15 * 60_000;
+const IDLE_TIMEOUT = 90_000;
 const BATCH = 2000;
+const STALE_MS = 20 * 60_000;
 
-export async function downloadList(url) {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(new Error('timeout')), 120_000);
+/** Linhas de um texto (upload) ou de um fluxo de bytes (download). */
+async function* linesOf(source) {
+  if (typeof source === 'string') {
+    yield* source.split(/\r?\n/);
+    return;
+  }
+  const decoder = new TextDecoder('utf-8');
+  let rest = '';
+  for await (const chunk of source) {
+    rest += decoder.decode(chunk, { stream: true });
+    const parts = rest.split(/\r?\n/);
+    rest = parts.pop() ?? '';
+    yield* parts;
+  }
+  rest += decoder.decode();
+  if (rest) yield rest;
+}
+
+/** Baixa a lista com limite de tamanho, tempo total e tempo parado; devolve o fluxo de bytes. */
+async function* download(url, ctrl) {
+  const { res } = await safeFetch(url, { signal: ctrl.signal, timeoutMs: 60_000 });
+  if (!res.ok) {
+    res.body?.cancel().catch(() => {});
+    throw new HttpError(502, `O servidor da lista respondeu ${res.status}`);
+  }
+  let size = 0;
+  let idle = setTimeout(() => ctrl.abort(new Error('idle')), IDLE_TIMEOUT);
   try {
-    const { res } = await safeFetch(url, { signal: ctrl.signal, timeoutMs: 30_000 });
-    if (!res.ok) throw new HttpError(502, `O servidor da lista respondeu ${res.status}`);
-    const chunks = [];
-    let size = 0;
     for await (const chunk of res.body) {
+      clearTimeout(idle);
+      idle = setTimeout(() => ctrl.abort(new Error('idle')), IDLE_TIMEOUT);
       size += chunk.length;
-      if (size > MAX_BYTES) throw new HttpError(413, 'Lista grande demais (máx. 80 MB)');
-      chunks.push(chunk);
+      if (size > MAX_BYTES) throw new HttpError(413, 'Lista grande demais (máx. 300 MB)');
+      yield chunk;
     }
-    return Buffer.concat(chunks).toString('utf8');
-  } catch (err) {
-    if (ctrl.signal.aborted) throw new HttpError(504, 'O download da lista passou de 2 minutos');
-    throw err;
   } finally {
-    clearTimeout(timer);
+    clearTimeout(idle);
   }
 }
 
-/** Grava os itens da lista. Retorna as contagens. */
-export async function saveItems(playlistId, items) {
-  if (!items.length) throw new HttpError(422, 'Nenhum canal encontrado. Confira se o arquivo/link é uma lista M3U.');
-  if (items.length > MAX_ITEMS) items = items.slice(0, MAX_ITEMS);
+async function insertBatch(playlistId, items, syncId) {
+  // A mesma URL duas vezes no mesmo INSERT quebra o ON CONFLICT: fica a última. Entre lotes, o upsert resolve.
+  const part = [...new Map(items.map((it) => [it.url, it])).values()];
+  const col = (k) => part.map((it) => it[k]);
+  await prisma.$executeRaw`
+    INSERT INTO "Channel" ("playlistId","name","groupTitle","logo","tvgId","url","kind","userAgent","referrer","position","seriesName","season","episode","syncId")
+    SELECT ${playlistId}::uuid, * FROM unnest(
+      ${col('name')}::text[], ${col('groupTitle')}::text[], ${col('logo')}::text[], ${col('tvgId')}::text[],
+      ${col('url')}::text[], ${col('kind')}::text[], ${col('userAgent')}::text[], ${col('referrer')}::text[],
+      ${col('position')}::int[], ${col('seriesName')}::text[], ${col('season')}::int[], ${col('episode')}::int[],
+      array_fill(${syncId}::text, ARRAY[${part.length}::int]))
+    ON CONFLICT ("playlistId","url") DO UPDATE SET
+      "name"=EXCLUDED."name","groupTitle"=EXCLUDED."groupTitle","logo"=EXCLUDED."logo","tvgId"=EXCLUDED."tvgId",
+      "kind"=EXCLUDED."kind","userAgent"=EXCLUDED."userAgent","referrer"=EXCLUDED."referrer","position"=EXCLUDED."position",
+      "seriesName"=EXCLUDED."seriesName","season"=EXCLUDED."season","episode"=EXCLUDED."episode","syncId"=EXCLUDED."syncId"`;
+}
+
+/** Lê e grava a lista; só apaga os canais que sumiram se a leitura terminou inteira. */
+async function importLines(playlistId, lines) {
   const syncId = crypto.randomUUID();
-  for (let i = 0; i < items.length; i += BATCH) {
-    const part = items.slice(i, i + BATCH);
-    const col = (k) => part.map((it) => it[k]);
-    const pos = part.map((_, j) => i + j);
-    await prisma.$executeRaw`
-      INSERT INTO "Channel" ("playlistId","name","groupTitle","logo","tvgId","url","kind","userAgent","referrer","position","syncId")
-      SELECT ${playlistId}::uuid, * FROM unnest(
-        ${col('name')}::text[], ${col('groupTitle')}::text[], ${col('logo')}::text[], ${col('tvgId')}::text[],
-        ${col('url')}::text[], ${col('kind')}::text[], ${col('userAgent')}::text[], ${col('referrer')}::text[],
-        ${pos}::int[], array_fill(${syncId}::text, ARRAY[${part.length}::int]))
-      ON CONFLICT ("playlistId","url") DO UPDATE SET
-        "name"=EXCLUDED."name","groupTitle"=EXCLUDED."groupTitle","logo"=EXCLUDED."logo","tvgId"=EXCLUDED."tvgId",
-        "kind"=EXCLUDED."kind","userAgent"=EXCLUDED."userAgent","referrer"=EXCLUDED."referrer",
-        "position"=EXCLUDED."position","syncId"=EXCLUDED."syncId"`;
+  const parser = createParser({ dedupe: false });
+  let total = 0;
+  let batch = [];
+  let lastProgress = Date.now();
+  const flush = async () => {
+    if (!batch.length) return;
+    await insertBatch(playlistId, batch, syncId);
+    batch = [];
+    if (Date.now() - lastProgress > 2000) {
+      lastProgress = Date.now();
+      await prisma.playlist.update({ where: { id: playlistId }, data: { syncProgress: total } });
+    }
+  };
+  for await (const line of lines) {
+    const it = parser.push(line);
+    if (!it) continue;
+    if (total >= MAX_ITEMS) break;
+    it.position = total++;
+    batch.push(it);
+    if (batch.length >= BATCH) await flush();
   }
+  await flush();
+  if (!total) throw new HttpError(422, 'Nenhum canal encontrado. Confira se o arquivo/link é uma lista M3U.');
   await prisma.$executeRaw`DELETE FROM "Channel" WHERE "playlistId" = ${playlistId}::uuid AND "syncId" <> ${syncId}`;
-  const counts = { live: 0, movie: 0, series: 0 };
-  for (const it of items) counts[it.kind]++;
-  return { channelCount: items.length, liveCount: counts.live, movieCount: counts.movie, seriesCount: counts.series };
+  const [c] = await prisma.$queryRaw`
+    SELECT COUNT(*)::int AS total,
+           COUNT(*) FILTER (WHERE "kind" = 'live')::int AS live,
+           COUNT(*) FILTER (WHERE "kind" = 'movie')::int AS movie,
+           COUNT(DISTINCT COALESCE(NULLIF("seriesName", ''), "name")) FILTER (WHERE "kind" = 'series')::int AS series
+    FROM "Channel" WHERE "playlistId" = ${playlistId}::uuid`;
+  // seriesCount = número de séries (não de episódios); channelCount = todos os itens.
+  return { channelCount: c.total, liveCount: c.live, movieCount: c.movie, seriesCount: c.series };
 }
-
-const STALE_MS = 15 * 60_000;
 
 /**
- * Atualiza uma lista; `text` vem do upload, senão baixa do link. Reivindica a lista na hora (erro 409 se já
- * estiver em andamento) e devolve { playlist, done } — `done` termina quando a importação acaba. Erros ficam gravados na lista.
+ * Atualiza uma lista; `source` é o corpo do upload (fluxo de bytes), senão baixa do link. Reivindica a lista na hora (409 se já estiver
+ * em andamento, vale entre réplicas) e devolve { playlist, done }; a importação segue em segundo plano.
  */
-export async function startSync(playlistId, text) {
+export async function startSync(playlistId, source) {
   const pl = await prisma.playlist.findUnique({ where: { id: playlistId } });
   if (!pl) throw new HttpError(404, 'Lista não encontrada');
-  if (text == null && !pl.url) throw new HttpError(400, 'Esta lista veio de arquivo: envie o arquivo de novo para atualizar');
-  // Reivindicação atômica (vale entre réplicas); importação parada há 15 min pode ser retomada.
+  if (source == null && !pl.url) throw new HttpError(400, 'Esta lista veio de arquivo: envie o arquivo de novo para atualizar');
   const claimed = await prisma.playlist.updateMany({
     where: { id: playlistId, OR: [{ status: { not: 'syncing' } }, { syncStarted: null }, { syncStarted: { lt: new Date(Date.now() - STALE_MS) } }] },
-    data: { status: 'syncing', error: null, syncStarted: new Date() },
+    data: { status: 'syncing', error: null, syncStarted: new Date(), syncProgress: 0 },
   });
   if (!claimed.count) throw new HttpError(409, 'Esta lista já está sendo atualizada');
   const done = (async () => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(new Error('timeout')), TOTAL_TIMEOUT);
     try {
-      const body = text ?? (await downloadList(pl.url));
-      const counts = await saveItems(playlistId, parseM3U(body));
+      const counts = await importLines(playlistId, linesOf(source ?? download(pl.url, ctrl)));
       return await prisma.playlist.update({ where: { id: playlistId }, data: { ...counts, status: 'ok', error: null, syncedAt: new Date(), syncStarted: null } });
     } catch (err) {
-      const message = err instanceof HttpError ? err.message : 'Falha ao ler a lista';
-      if (!(err instanceof HttpError)) console.error('sync', playlistId, err);
+      let message = err instanceof HttpError ? err.message : 'Falha ao ler a lista';
+      if (ctrl.signal.aborted) message = ctrl.signal.reason?.message === 'idle' ? 'O servidor da lista parou de enviar dados' : 'O download da lista passou de 15 minutos';
+      else if (!(err instanceof HttpError)) console.error('sync', playlistId, err);
       await prisma.playlist.update({ where: { id: playlistId }, data: { status: 'error', error: message, syncStarted: null } }).catch(() => {});
-      throw err instanceof HttpError ? err : new HttpError(500, message);
+      throw new HttpError(err instanceof HttpError ? err.status : 500, message);
+    } finally {
+      clearTimeout(timer);
     }
   })();
   done.catch(() => {});
   return { playlist: await prisma.playlist.findUnique({ where: { id: playlistId } }), done };
 }
 
-/** Atualização automática diária das listas por link (a reivindicação evita que duas réplicas façam a mesma). */
+/** Atualização automática diária das listas por link. */
 export function startAutoRefresh() {
   const tick = async () => {
     try {

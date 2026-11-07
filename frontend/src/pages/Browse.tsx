@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ChevronDown, Layers, ListVideo, Search, Tv, X } from 'lucide-react';
-import { api, Channel, Group, Kind, KIND_LABEL, Playlist, useApi } from '../api';
-import { ChannelGrid } from '../components/ChannelCard';
+import { api, Channel, Group, Kind, KIND_LABEL, Playlist, Series, useApi } from '../api';
+import { ChannelGrid, SeriesGrid } from '../components/ChannelCard';
 import { Logo, Page } from '../components/Layout';
 import { btnPrimary, Empty, ErrorBox, input, Spinner } from '../components/ui';
 
@@ -80,30 +80,44 @@ export default function Browse() {
   }, [search]);
 
   const [channels, setChannels] = useState<Channel[]>([]);
+  const [series, setSeries] = useState<Series[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const reqId = useRef(0);
+  // Aba Séries mostra cada série uma vez; a busca mostra séries (até 18) e, abaixo, canais e filmes.
+  const seriesMode = !q && kind === 'series';
 
   const query = useMemo(() => {
     const p = new URLSearchParams({ limit: String(PAGE) });
     if (q) p.set('q', q);
     else {
-      p.set('kind', kind);
+      if (!seriesMode) p.set('kind', kind);
       if (group !== ALL) p.set('group', group);
     }
     return p.toString();
-  }, [kind, group, q]);
+  }, [kind, group, q, seriesMode]);
 
   const load = useCallback(
     async (offset: number) => {
       const id = ++reqId.current;
       setLoading(true);
       try {
-        const r = await api.get<{ channels: Channel[]; hasMore: boolean }>(`channels?${query}&offset=${offset}`);
-        if (id !== reqId.current) return;
-        setChannels((prev) => (offset ? [...prev, ...r.channels] : r.channels));
-        setHasMore(r.hasMore);
+        if (seriesMode) {
+          const r = await api.get<{ series: Series[]; hasMore: boolean }>(`series?${query}&offset=${offset}`);
+          if (id !== reqId.current) return;
+          setSeries((prev) => (offset ? [...prev, ...r.series] : r.series));
+          setHasMore(r.hasMore);
+        } else {
+          const [r, s] = await Promise.all([
+            api.get<{ channels: Channel[]; hasMore: boolean }>(`channels?${query}&offset=${offset}`),
+            q && !offset ? api.get<{ series: Series[] }>(`series?q=${encodeURIComponent(q)}&limit=18`) : null,
+          ]);
+          if (id !== reqId.current) return;
+          setChannels((prev) => (offset ? [...prev, ...r.channels] : r.channels));
+          if (!offset) setSeries(s?.series || []);
+          setHasMore(r.hasMore);
+        }
         setError('');
       } catch (e) {
         if (id === reqId.current) setError((e as Error).message);
@@ -111,11 +125,12 @@ export default function Browse() {
         if (id === reqId.current) setLoading(false);
       }
     },
-    [query],
+    [query, seriesMode, q],
   );
 
   useEffect(() => {
     setChannels([]);
+    setSeries([]);
     load(0);
   }, [load]);
 
@@ -123,10 +138,10 @@ export default function Browse() {
   useEffect(() => {
     const el = sentinel.current;
     if (!el || !hasMore || loading) return;
-    const obs = new IntersectionObserver((e) => e[0].isIntersecting && load(channels.length), { rootMargin: '600px' });
+    const obs = new IntersectionObserver((e) => e[0].isIntersecting && load(seriesMode ? series.length : channels.length), { rootMargin: '600px' });
     obs.observe(el);
     return () => obs.disconnect();
-  }, [hasMore, loading, channels.length, load]);
+  }, [hasMore, loading, channels.length, series.length, seriesMode, load]);
 
   const update = (c: Channel) => setChannels((list) => list.map((x) => (x.id === c.id ? c : x)));
   const pickGroup = (g: string) => {
@@ -204,9 +219,16 @@ export default function Browse() {
           )}
           {q && <p className="mb-3 text-sm text-slate-400">Resultados para “{q}”</p>}
           <ErrorBox message={error} />
+          {series.length > 0 && (
+            <>
+              {q && <h2 className="mb-2 text-sm font-semibold text-slate-300">Séries</h2>}
+              <SeriesGrid series={series} />
+              {q && channels.length > 0 && <h2 className="mb-2 mt-6 text-sm font-semibold text-slate-300">Canais e filmes</h2>}
+            </>
+          )}
           {channels.length > 0 && <ChannelGrid channels={channels} onChange={update} />}
-          {!loading && !error && !channels.length && (
-            <Empty icon={<Tv className="h-7 w-7" />} title={q ? 'Nada encontrado' : 'Nenhum canal aqui'}>
+          {!loading && !error && !channels.length && !series.length && (
+            <Empty icon={<Tv className="h-7 w-7" />} title={q ? 'Nada encontrado' : 'Nada aqui'}>
               {q ? 'Tente outro nome.' : 'Escolha outro grupo ou tipo.'}
             </Empty>
           )}

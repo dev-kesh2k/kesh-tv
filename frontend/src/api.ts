@@ -99,6 +99,7 @@ export interface Playlist {
   status: 'pending' | 'syncing' | 'ok' | 'error';
   error: string | null;
   syncedAt: string | null;
+  syncProgress: number;
 }
 
 export interface Channel {
@@ -111,6 +112,22 @@ export interface Channel {
   favorite: boolean;
   watchedAt?: string;
 }
+
+export interface Series {
+  playlistId: string;
+  name: string;
+  group: string;
+  logo: string;
+  episodes: number;
+  seasons: number;
+}
+
+export interface Episode extends Channel {
+  season: number;
+  episode: number;
+}
+
+export const seriesLink = (s: { playlistId: string; name: string }) => `/serie/${s.playlistId}?nome=${encodeURIComponent(s.name)}`;
 
 export interface Group {
   name: string;

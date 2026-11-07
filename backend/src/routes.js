@@ -1,4 +1,4 @@
-import express, { Router } from 'express';
+import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma, HttpError } from './db.js';
 import { signToken, publicUser, requireAuth, tooManyAttempts, recordFailure, clearFailures } from './auth.js';
@@ -123,19 +123,34 @@ api.post('/playlists', wrap(async (req, res) => {
   res.status(201).json({ playlist: (await startSync(pl.id)).playlist });
 }));
 
-/** Por arquivo: o texto da lista vem no corpo (text/plain). ?id= atualiza uma lista de arquivo existente. */
-api.post('/playlists/upload', express.text({ type: '*/*', limit: '80mb' }), wrap(async (req, res) => {
-  const body = typeof req.body === 'string' ? req.body : '';
-  if (!body.trim()) throw new HttpError(400, 'Arquivo vazio');
-  if (req.query.id) {
-    const pl = await ownPlaylist(req, req.query.id);
-    return res.json({ playlist: (await startSync(pl.id, body)).playlist });
+/** Por arquivo: o corpo da requisição é o próprio .m3u, lido em fluxo. ?id= atualiza uma lista de arquivo existente. */
+api.post('/playlists/upload', wrap(async (req, res) => {
+  const len = Number(req.headers['content-length'] || 0);
+  if (len > 95 * 1024 * 1024) throw new HttpError(413, 'Arquivo grande demais para envio (máx. 95 MB). Use o link da lista.');
+  let pl;
+  if (req.query.id) pl = await ownPlaylist(req, req.query.id);
+  else {
+    const name = text(req.query.name, 'Nome', { max: 80 }) || 'Minha lista';
+    if ((await prisma.playlist.count({ where: { userId: req.user.id } })) >= 20) throw new HttpError(400, 'Limite de 20 listas');
+    pl = await prisma.playlist.create({ data: { userId: req.user.id, name, url: null, autoRefresh: false } });
   }
-  const name = text(req.query.name, 'Nome', { max: 80 }) || 'Minha lista';
-  if ((await prisma.playlist.count({ where: { userId: req.user.id } })) >= 20) throw new HttpError(400, 'Limite de 20 listas');
-  const pl = await prisma.playlist.create({ data: { userId: req.user.id, name, url: null, autoRefresh: false } });
-  res.status(201).json({ playlist: (await startSync(pl.id, body)).playlist });
+  const { done } = await startSync(pl.id, limitBody(req, 95 * 1024 * 1024));
+  try {
+    res.status(req.query.id ? 200 : 201).json({ playlist: await done });
+  } catch (err) {
+    if (!req.query.id) await prisma.playlist.delete({ where: { id: pl.id } }).catch(() => {});
+    throw err;
+  }
 }));
+
+async function* limitBody(req, max) {
+  let size = 0;
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size > max) throw new HttpError(413, 'Arquivo grande demais (máx. 95 MB)');
+    yield chunk;
+  }
+}
 
 api.put('/playlists/:id', wrap(async (req, res) => {
   const pl = await ownPlaylist(req, req.params.id);
@@ -187,15 +202,30 @@ async function playlistIds(req) {
 }
 const kindOf = (v) => (KINDS.includes(String(v)) ? String(v) : 'live');
 
+// Contagem por grupo em listas enormes leva ~1 s: guarda até a lista ser atualizada (chave inclui syncedAt).
+const groupCache = new Map();
+
 api.get('/groups', wrap(async (req, res) => {
   const ids = await playlistIds(req);
   const kind = kindOf(req.query.kind);
   if (!ids.length) return res.json({ groups: [], total: 0 });
-  const rows = await prisma.$queryRaw`
-    SELECT "groupTitle" AS name, COUNT(*)::int AS count, MIN("position") AS pos
-    FROM "Channel" WHERE "playlistId" = ANY(${ids}::uuid[]) AND "kind" = ${kind}
-    GROUP BY "groupTitle" ORDER BY pos`;
-  res.json({ groups: rows.map((r) => ({ name: r.name, count: r.count })), total: rows.reduce((s, r) => s + r.count, 0) });
+  const stamps = await prisma.playlist.findMany({ where: { id: { in: ids } }, select: { id: true, syncedAt: true }, orderBy: { id: 'asc' } });
+  const key = `${kind}|${stamps.map((p) => `${p.id}:${p.syncedAt?.getTime()}`).join(',')}`;
+  if (groupCache.has(key)) return res.json(groupCache.get(key));
+  const rows =
+    kind === 'series'
+      ? await prisma.$queryRaw`
+        SELECT "groupTitle" AS name, COUNT(DISTINCT COALESCE(NULLIF("seriesName", ''), "name"))::int AS count, MIN("position") AS pos
+        FROM "Channel" WHERE "playlistId" = ANY(${ids}::uuid[]) AND "kind" = 'series'
+        GROUP BY "groupTitle" ORDER BY pos`
+      : await prisma.$queryRaw`
+        SELECT "groupTitle" AS name, COUNT(*)::int AS count, MIN("position") AS pos
+        FROM "Channel" WHERE "playlistId" = ANY(${ids}::uuid[]) AND "kind" = ${kind}
+        GROUP BY "groupTitle" ORDER BY pos`;
+  const out = { groups: rows.map((r) => ({ name: r.name, count: r.count })), total: rows.reduce((s, r) => s + r.count, 0) };
+  if (groupCache.size > 200) groupCache.clear();
+  groupCache.set(key, out);
+  res.json(out);
 }));
 
 api.get('/channels', wrap(async (req, res) => {
@@ -204,7 +234,8 @@ api.get('/channels', wrap(async (req, res) => {
   const offset = Math.max(Number(req.query.offset) || 0, 0);
   const q = text(req.query.q, 'Busca', { max: 100 });
   const where = { playlistId: { in: ids } };
-  if (!q || req.query.kind) where.kind = kindOf(req.query.kind);
+  // Busca sem tipo: canais e filmes (episódios aparecem agrupados em /series).
+  where.kind = !q || req.query.kind ? kindOf(req.query.kind) : { not: 'series' };
   if (req.query.group !== undefined && req.query.group !== '__all') where.groupTitle = String(req.query.group);
   if (q) where.name = { contains: q, mode: 'insensitive' };
   const rows = await prisma.channel.findMany({ where, select: channelSelect, orderBy: [{ playlistId: 'asc' }, { position: 'asc' }], skip: offset, take: limit + 1 });
@@ -235,9 +266,20 @@ api.get('/channels/:id/play', wrap(async (req, res) => {
   res.json({ channel: decorated, sources, original: ch.url });
 }));
 
-/** Vizinhos no mesmo grupo (anterior/próximo e lista para trocar de canal). */
+/** Vizinhos: episódios da mesma série (em ordem) ou canais do mesmo grupo — anterior/próximo e lista para trocar. */
 api.get('/channels/:id/around', wrap(async (req, res) => {
   const ch = await ownChannel(req);
+  if (ch.kind === 'series' && ch.seriesName) {
+    const eps = await prisma.channel.findMany({
+      where: { playlistId: ch.playlistId, seriesName: ch.seriesName },
+      select: channelSelect,
+      orderBy: [{ season: 'asc' }, { episode: 'asc' }, { position: 'asc' }],
+      take: 3000,
+    });
+    const i = eps.findIndex((e) => e.id === ch.id);
+    const list = eps.slice(Math.max(0, i - 30), i + 61);
+    return res.json({ channels: await decorate(req.user.id, list), prev: eps[i - 1]?.id || null, next: eps[i + 1]?.id || null, series: ch.seriesName });
+  }
   const base = { playlistId: ch.playlistId, kind: ch.kind, groupTitle: ch.groupTitle };
   const [before, after] = await Promise.all([
     prisma.channel.findMany({ where: { ...base, position: { lt: ch.position } }, select: channelSelect, orderBy: { position: 'desc' }, take: 30 }),
@@ -245,6 +287,51 @@ api.get('/channels/:id/around', wrap(async (req, res) => {
   ]);
   const list = await decorate(req.user.id, [...before.reverse(), ch, ...after]);
   res.json({ channels: list, prev: before.length ? before[before.length - 1].id : null, next: after[0]?.id || null });
+}));
+
+// ---------- Séries (episódios agrupados pelo nome antes de SxxEyy) ----------
+api.get('/series', wrap(async (req, res) => {
+  const ids = await playlistIds(req);
+  const limit = Math.min(Math.max(Number(req.query.limit) || 60, 1), 200);
+  const offset = Math.max(Number(req.query.offset) || 0, 0);
+  const group = req.query.group !== undefined && req.query.group !== '__all' ? String(req.query.group) : null;
+  const q = text(req.query.q, 'Busca', { max: 100 });
+  if (!ids.length) return res.json({ series: [], hasMore: false });
+  const like = q ? `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%` : null;
+  const rows = await prisma.$queryRaw`
+    SELECT "playlistId", COALESCE(NULLIF("seriesName", ''), "name") AS name, MIN("groupTitle") AS "group",
+           MIN(NULLIF("logo", '')) AS logo, COUNT(*)::int AS episodes, COUNT(DISTINCT "season")::int AS seasons, MIN("position") AS pos
+    FROM "Channel"
+    WHERE "playlistId" = ANY(${ids}::uuid[]) AND "kind" = 'series'
+      AND (${group}::text IS NULL OR "groupTitle" = ${group}::text)
+      AND (${like}::text IS NULL OR COALESCE(NULLIF("seriesName", ''), "name") ILIKE ${like}::text)
+    GROUP BY "playlistId", COALESCE(NULLIF("seriesName", ''), "name")
+    ORDER BY pos LIMIT ${limit + 1} OFFSET ${offset}`;
+  res.json({
+    series: rows.slice(0, limit).map((r) => ({ playlistId: r.playlistId, name: r.name, group: r.group, logo: logoLink(r.logo || ''), episodes: r.episodes, seasons: r.seasons })),
+    hasMore: rows.length > limit,
+  });
+}));
+
+api.get('/series/episodes', wrap(async (req, res) => {
+  const pl = await ownPlaylist(req, req.query.playlist);
+  const name = text(req.query.name, 'Série', { max: 200, required: true });
+  let rows = await prisma.channel.findMany({
+    where: { playlistId: pl.id, seriesName: name },
+    select: { ...channelSelect, season: true, episode: true },
+    orderBy: [{ season: 'asc' }, { episode: 'asc' }, { position: 'asc' }],
+    take: 5000,
+  });
+  // Item de série sem SxxEyy no nome: é a própria "série" de um episódio só.
+  if (!rows.length) rows = await prisma.channel.findMany({ where: { playlistId: pl.id, kind: 'series', name }, select: { ...channelSelect, season: true, episode: true }, take: 50 });
+  if (!rows.length) throw new HttpError(404, 'Série não encontrada');
+  const list = await decorate(req.user.id, rows);
+  res.json({
+    name,
+    group: rows[0].groupTitle,
+    logo: list.find((c) => c.logo)?.logo || '',
+    episodes: list.map((c, i) => ({ ...c, season: rows[i].season, episode: rows[i].episode })),
+  });
 }));
 
 api.post('/channels/:id/watch', wrap(async (req, res) => {

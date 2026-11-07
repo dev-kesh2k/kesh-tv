@@ -33,12 +33,36 @@ export function rewriteHls(text, baseUrl, ua, ref) {
     .join('\n');
 }
 
+// Filmes/episódios de Xtream redirecionam para um CDN com token a cada pedido (~2 s). Cada avanço no vídeo é um
+// novo pedido com Range: guarda o destino por 5 min para não repetir o salto.
+const redirects = new Map();
+const REDIRECT_TTL = 5 * 60_000;
+
 export async function proxyStream(req, res) {
   const { url, ua, ref } = verify(req.query);
   const ctrl = new AbortController();
   req.on('close', () => ctrl.abort());
   const headers = req.headers.range ? { Range: req.headers.range } : {};
-  const { res: up, finalUrl } = await safeFetch(url, { headers, signal: ctrl.signal, ua, ref, timeoutMs: 15000 });
+  const cached = redirects.get(url);
+  const target = cached && cached.at > Date.now() - REDIRECT_TTL ? cached.to : url;
+  let up;
+  let finalUrl;
+  try {
+    ({ res: up, finalUrl } = await safeFetch(target, { headers, signal: ctrl.signal, ua, ref, timeoutMs: 20000 }));
+    if (target !== url && !up.ok && up.status !== 206) {
+      // Destino guardado expirou: volta ao link original.
+      up.body?.cancel().catch(() => {});
+      redirects.delete(url);
+      ({ res: up, finalUrl } = await safeFetch(url, { headers, signal: ctrl.signal, ua, ref, timeoutMs: 20000 }));
+    }
+  } catch (err) {
+    if (ctrl.signal.aborted) return; // o usuário fechou o vídeo
+    throw err;
+  }
+  if (finalUrl !== url && typeFromUrl(url) === 'file') {
+    if (redirects.size > 2000) redirects.clear();
+    redirects.set(url, { to: finalUrl, at: cached?.to === finalUrl ? cached.at : Date.now() });
+  }
   if (!up.ok && up.status !== 206) {
     up.body?.cancel().catch(() => {});
     throw new HttpError(502, `A fonte do canal respondeu ${up.status}`);
@@ -62,6 +86,7 @@ export async function proxyStream(req, res) {
   if (!up.body) return res.end();
   const body = Readable.fromWeb(up.body);
   body.on('error', () => res.destroy());
+  res.on('close', () => body.destroy());
   body.pipe(res);
 }
 

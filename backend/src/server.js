@@ -21,7 +21,7 @@ app.use((_req, res) => res.status(404).json({ error: 'Rota não encontrada' }));
 app.use((err, _req, res, _next) => {
   if (res.headersSent) return res.destroy();
   if (err?.type === 'entity.parse.failed') return res.status(400).json({ error: 'JSON inválido' });
-  if (err?.type === 'entity.too.large') return res.status(413).json({ error: 'Arquivo grande demais (máx. 80 MB)' });
+  if (err?.type === 'entity.too.large') return res.status(413).json({ error: 'Requisição grande demais' });
   if (err?.code === 'P2025') return res.status(404).json({ error: 'Registro não encontrado' });
   if (err?.code === 'P2002') return res.status(409).json({ error: 'Registro duplicado' });
   const status = err instanceof HttpError ? err.status : err.status || 500;
