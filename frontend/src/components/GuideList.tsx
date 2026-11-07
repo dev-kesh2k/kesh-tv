@@ -38,7 +38,7 @@ function GuideRow({ channel: c, onChange }: { channel: Channel; onChange?: (c: C
         className="group grid min-h-[64px] grid-cols-[2.75rem_4.5rem_minmax(0,1fr)_2.75rem] items-center gap-x-3 px-1 py-2 transition-colors hover:bg-ink-900 sm:grid-cols-[3.25rem_5.5rem_minmax(0,1fr)_minmax(0,1.3fr)_2.75rem] 2xl:grid-cols-[3.25rem_5.5rem_minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1fr)_2.75rem]"
       >
         <span className="text-right text-lg font-semibold text-slate-500 group-hover:text-brand">{c.number ?? ''}</span>
-        <ChannelLogo channel={c} className="aspect-video w-full rounded-[4px] !p-1.5" />
+        <ChannelLogo channel={c} compact className="aspect-video w-full rounded-[4px] !p-1.5" />
         <div className="min-w-0">
           <p className="font-display truncate text-[1.05rem] leading-tight text-slate-100">{c.name}</p>
           {/* No celular o programa no ar fica embaixo do nome. */}

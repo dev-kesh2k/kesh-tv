@@ -5,13 +5,32 @@ import { apiUrl, Channel, programmeProgress, Series, seriesLink, toggleFavorite 
 
 const KIND_ICON = { live: Tv, movie: Film, series: Clapperboard };
 
-export function ChannelLogo({ channel, className = '' }: { channel: Channel; className?: string }) {
+// Palavras que não identificam o canal ("Canal 24H Animes" → "24H Animes").
+const GENERIC = /^(canal|canais|tv|hd|fhd|uhd|sd|4k|h265|br|the|o|a|de|do|da)$/i;
+
+/** Iniciais que ignoram palavras genéricas: "Canal AdultSwim.br" → "AD", "Globo SP" → "GS". */
+export function monogram(name: string) {
+  const words = name.replace(/[^\p{L}\p{N} ]/gu, ' ').split(/\s+/).filter((w) => w && !GENERIC.test(w));
+  if (!words.length) return '';
+  return (words.length === 1 ? words[0].slice(0, 2) : words[0][0] + words[1][0]).toUpperCase();
+}
+
+/**
+ * Logo do canal; sem logo, um logo de texto: o nome em tipo estreito (cartões) ou iniciais (espaços pequenos,
+ * `compact`). Fundo liso — o nome do canal é a identidade, não um degradê genérico.
+ */
+export function ChannelLogo({ channel, className = '', compact = false }: { channel: Channel; className?: string; compact?: boolean }) {
   const [state, setState] = useState<'loading' | 'ok' | 'failed'>(channel.logo ? 'loading' : 'failed');
   const Icon = KIND_ICON[channel.kind] || Tv;
-  const initials = channel.name.replace(/[^\p{L}\p{N} ]/gu, '').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+  const mono = monogram(channel.name);
   return (
-    <div className={`relative grid place-items-center overflow-hidden ${state === 'ok' ? 'bg-ink-800' : 'bg-gradient-to-br from-ink-700 to-ink-800'} text-slate-300 ${className}`}>
-      {state !== 'ok' && (initials ? <span className="text-lg font-bold tracking-wide">{initials}</span> : <Icon className="h-7 w-7" />)}
+    <div className={`relative grid place-items-center overflow-hidden bg-ink-800 text-slate-300 ${className}`}>
+      {state !== 'ok' &&
+        (compact ? (
+          mono ? <span className="font-display text-base">{mono}</span> : <Icon className="h-5 w-5" />
+        ) : (
+          <span className="font-display line-clamp-3 px-3 text-center text-[1.15rem] leading-tight text-slate-200">{channel.name}</span>
+        ))}
       {state !== 'failed' && (
         <img
           src={apiUrl(channel.logo)}
