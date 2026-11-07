@@ -276,8 +276,41 @@ export function Player({
   };
   useEffect(() => () => window.clearTimeout(seekTimer.current), []);
 
+  // Atalhos: espaço/K pausa, F tela cheia, M mudo, ←/→ 10 s (↑/↓ trocam de canal na página).
+  const box = useRef<HTMLDivElement>(null);
+  const seekRef = useRef(seek);
+  seekRef.current = seek;
+  const shownRef = useRef(shown);
+  shownRef.current = shown;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = video.current;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (!el || e.ctrlKey || e.metaKey || e.altKey || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'BUTTON') return;
+      const k = e.key.toLowerCase();
+      if (k === ' ' || k === 'k') {
+        e.preventDefault();
+        if (el.paused) el.play().catch(() => {});
+        else el.pause();
+      } else if (k === 'f') {
+        if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+        else (box.current || el).requestFullscreen?.().catch(() => {});
+      } else if (k === 'm') {
+        el.muted = !el.muted;
+      } else if (k === 'arrowleft' || k === 'arrowright') {
+        const d = k === 'arrowleft' ? -10 : 10;
+        if (convRef.current) seekRef.current(shownRef.current + d);
+        else if (Number.isFinite(el.duration)) el.currentTime = Math.max(0, Math.min(el.duration - 1, el.currentTime + d));
+        else return;
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   return (
-    <div>
+    <div ref={box} className="bg-black sm:bg-transparent">
     <div className="relative aspect-video w-full overflow-hidden bg-black sm:rounded-2xl">
       <video ref={video} className="h-full w-full bg-black" controls playsInline autoPlay title={title} />
       {muted && state === 'playing' && (
