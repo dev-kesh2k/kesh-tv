@@ -184,3 +184,14 @@ export async function toggleFavorite(c: Channel): Promise<boolean> {
   else await api.post(`favorites/${c.id}`);
   return !c.favorite;
 }
+
+/**
+ * Nome do grupo sem repetir o tipo da aba: "Filmes | Ação" vira "Ação" em Filmes, "Séries - Netflix" vira
+ * "Netflix" em Séries. Só o texto exibido; o filtro continua usando o nome original.
+ */
+export function groupLabel(name: string, kind: Kind): string {
+  if (!name) return 'Sem grupo';
+  const words: Record<Kind, string> = { live: 'canais|tv|ao vivo', movie: 'filmes?|movies?|vod', series: 's[ée]ries?' };
+  const cut = name.replace(new RegExp(`^\\s*(${words[kind]})\\s*[|:\\-–•]\\s*`, 'i'), '').trim();
+  return cut || name;
+}
