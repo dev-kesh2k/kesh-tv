@@ -119,7 +119,7 @@ export default function Browse() {
   };
   useTitle(q ? `Busca: ${q}` : group !== ALL ? `${group || 'Sem grupo'} · ${KIND_LABEL[kind]}` : KIND_LABEL[kind]);
 
-  const { data: pls, loading: plLoading } = useApi<{ playlists: Playlist[] }>('playlists');
+  const { data: pls, loading: plLoading, error: plError, reload: reloadPls } = useApi<{ playlists: Playlist[] }>('playlists');
   const { data: favs } = useApi<{ channels: Channel[] }>('favorites');
   const { data: hist } = useApi<{ channels: Channel[] }>('history');
   const playlists = pls?.playlists || [];
@@ -234,6 +234,18 @@ export default function Browse() {
   };
 
   if (plLoading && !pls) return <Spinner label="Carregando…" />;
+  // Sem resposta do servidor não dá para saber se há listas: mostra o erro, não "nenhuma lista".
+  if (!pls && plError)
+    return (
+      <Page>
+        <Empty icon={<ListVideo className="h-7 w-7" />} title="Não foi possível carregar">
+          <p>{plError}</p>
+          <button type="button" onClick={reloadPls} className={`${btnPrimary} mt-5`}>
+            Tentar de novo
+          </button>
+        </Empty>
+      </Page>
+    );
   if (!playlists.length)
     return (
       <Page>
