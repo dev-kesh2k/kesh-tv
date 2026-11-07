@@ -25,7 +25,7 @@ export function TvOsd({ channel }: { channel?: Channel }) {
   return (
     <div className={`pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/80 to-transparent px-12 pb-10 pt-32 transition-opacity duration-500 ${visible ? 'opacity-100' : 'opacity-0'}`}>
       <div className="flex items-end gap-6">
-        <ChannelLogo channel={channel} className="h-24 w-40 shrink-0 rounded-2xl" />
+        <ChannelLogo channel={channel} className="h-24 w-40 shrink-0 rounded-[6px]" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-3">
             {live && <span className="rounded-md bg-tally px-2 py-0.5 text-sm font-bold tracking-wider text-white">AO VIVO</span>}
