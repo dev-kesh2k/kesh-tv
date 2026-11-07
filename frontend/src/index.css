@@ -23,3 +23,14 @@ textarea {
 .no-scrollbar {
   scrollbar-width: none;
 }
+
+/* Destaque bem visível para teclado e controle remoto (só quando o foco veio do teclado). */
+:focus-visible {
+  outline: 3px solid #f43f5e;
+  outline-offset: 2px;
+  border-radius: 0.75rem;
+}
+a:focus-visible > div:first-child,
+a:focus-visible {
+  box-shadow: 0 0 0 6px rgba(244, 63, 94, 0.25);
+}
