@@ -111,6 +111,9 @@ export interface Channel {
   logo: string;
   favorite: boolean;
   watchedAt?: string;
+  /** Recentes: segundos para continuar e fração assistida (0–1). */
+  position?: number;
+  progress?: number;
 }
 
 export interface Series {

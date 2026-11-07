@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Play } from 'lucide-react';
 import { Channel, Episode, useApi } from '../api';
-import { ChannelLogo } from '../components/ChannelCard';
+import { ChannelLogo, ProgressBar } from '../components/ChannelCard';
 import { Page } from '../components/Layout';
 import { btnPrimary, ErrorBox, Spinner } from '../components/ui';
 
@@ -19,6 +19,8 @@ function episodeTitle(e: Episode, series: string) {
   return rest || `Episódio ${e.episode || ''}`.trim();
 }
 
+const fmtClock = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+
 const label = (e: Episode) => (e.season || e.episode ? `T${e.season} · E${String(e.episode).padStart(2, '0')}` : '');
 
 export default function SeriesPage() {
@@ -31,6 +33,7 @@ export default function SeriesPage() {
   const seasons = useMemo(() => [...new Set((data?.episodes || []).map((e) => e.season))], [data]);
   const [season, setSeason] = useState<number | null>(null);
 
+  const progressOf = useMemo(() => new Map((hist?.channels || []).map((c) => [c.id, c])), [hist]);
   // Último episódio assistido desta série → "Continuar" e temporada aberta.
   const last = useMemo(() => {
     const ids = new Set((data?.episodes || []).map((e) => e.id));
@@ -65,7 +68,7 @@ export default function SeriesPage() {
               </p>
               {(last || first) && (
                 <Link to={`/assistir/${(last || first)!.id}`} className={`${btnPrimary} mt-4`}>
-                  <Play className="h-4 w-4 fill-current" /> {last ? `Continuar ${label(last)}` : 'Assistir'}
+                  <Play className="h-4 w-4 fill-current" /> {last ? `Continuar ${label(last)}${progressOf.get(last.id)?.position ? ` · ${fmtClock(progressOf.get(last.id)!.position!)}` : ''}` : 'Assistir'}
                 </Link>
               )}
             </div>
@@ -94,6 +97,7 @@ export default function SeriesPage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{episodeTitle(e, data.name)}</p>
                     {last?.id === e.id && <p className="text-xs text-brand-light">Último assistido</p>}
+                    {!!progressOf.get(e.id)?.progress && <ProgressBar value={progressOf.get(e.id)!.progress!} className="mt-1.5 overflow-hidden rounded-full" />}
                   </div>
                   <Play className="h-4 w-4 shrink-0 text-slate-500" />
                 </Link>
