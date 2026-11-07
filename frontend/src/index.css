@@ -57,3 +57,17 @@ html.is-tv .tv-sidebar {
 html.is-tv body {
   overflow-x: hidden;
 }
+
+/* Modo TV: textos pequenos dos cartões legíveis do sofá (~15% maiores). */
+html.is-tv {
+  font-size: 17px;
+}
+html.is-tv .text-\[10px\] {
+  font-size: 12px;
+}
+html.is-tv .text-\[11px\] {
+  font-size: 13px;
+}
+html.is-tv .text-\[13px\] {
+  font-size: 15px;
+}
