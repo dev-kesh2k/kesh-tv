@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Loader2, RotateCcw, VolumeX } from 'lucide-react';
+import { AlertTriangle, Loader2, Pause, RotateCcw, VolumeX } from 'lucide-react';
 import { api, apiUrl, Source } from '../api';
 
 type Engine = { destroy: () => void };
@@ -62,6 +62,10 @@ export function Player({
   const [dragging, setDragging] = useState<number | null>(null);
   // Posição pedida e ainda não aplicada: toques seguidos em +30s se somam e só o último reinicia a conversão.
   const [pending, setPending] = useState<number | null>(null);
+  // Sem controles nativos (TV): ícone de pausa e barra de tempo ao pausar/avançar.
+  const [paused, setPaused] = useState(false);
+  const [hud, setHud] = useState(false);
+  const hudTimer = useRef<number>();
   const seekTimer = useRef<number>();
 
   // Se o usuário ativar o som pelos controles do vídeo, some o botão.
@@ -111,6 +115,26 @@ export function Player({
       window.removeEventListener('pagehide', report);
     };
   }, [sources]);
+
+  useEffect(() => {
+    const el = video.current;
+    if (!el || controls) return;
+    const flash = () => {
+      setPaused(el.paused);
+      setHud(true);
+      window.clearTimeout(hudTimer.current);
+      if (!el.paused) hudTimer.current = window.setTimeout(() => setHud(false), 4000);
+    };
+    el.addEventListener('pause', flash);
+    el.addEventListener('play', flash);
+    el.addEventListener('seeking', flash);
+    return () => {
+      el.removeEventListener('pause', flash);
+      el.removeEventListener('play', flash);
+      el.removeEventListener('seeking', flash);
+      window.clearTimeout(hudTimer.current);
+    };
+  }, [controls]);
 
   useEffect(() => {
     const el = video.current;
@@ -329,6 +353,22 @@ export function Player({
     <div ref={box} className="bg-black sm:bg-transparent">
     <div className={`relative w-full overflow-hidden bg-black ${fill ? 'h-full' : 'aspect-video sm:rounded-2xl'}`}>
       <video ref={video} className="h-full w-full bg-black" controls={controls} playsInline autoPlay title={title} />
+      {!controls && state === 'playing' && paused && (
+        <div className="pointer-events-none absolute inset-0 grid place-items-center">
+          <div className="grid h-28 w-28 place-items-center rounded-full bg-black/60 backdrop-blur">
+            <Pause className="h-14 w-14 fill-white text-white" />
+          </div>
+        </div>
+      )}
+      {!controls && hud && state === 'playing' && (conv?.duration || Number.isFinite(video.current?.duration ?? NaN)) && (
+        <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center gap-4 bg-gradient-to-b from-black/80 to-transparent px-12 pb-16 pt-10 text-lg text-white">
+          <span className="font-mono">{fmtTime(conv ? shown : now)}</span>
+          <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/25">
+            <div className="h-full bg-brand" style={{ width: `${Math.min(100, ((conv ? shown : now) / ((conv?.duration || video.current?.duration) || 1)) * 100)}%` }} />
+          </div>
+          <span className="font-mono text-white/70">{fmtTime(conv?.duration || video.current?.duration || 0)}</span>
+        </div>
+      )}
       {muted && state === 'playing' && (
         <button
           type="button"
@@ -371,7 +411,7 @@ export function Player({
         </div>
       )}
     </div>
-    {conv && conv.duration > 0 && (
+    {controls && conv && conv.duration > 0 && (
       <div className="flex items-center gap-2 bg-ink-900 px-3 py-2 sm:mt-2 sm:rounded-xl">
         <button type="button" aria-label="Voltar 10 segundos" onClick={() => seek(shown - 10)} className="h-10 shrink-0 rounded-lg px-2 text-xs font-semibold text-slate-300 hover:bg-ink-800">
           −10s
