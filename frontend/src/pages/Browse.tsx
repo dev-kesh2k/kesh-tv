@@ -30,7 +30,7 @@ function GroupList({ groups, total, current, onPick, onHide, kind }: { groups: G
       <button
         type="button"
         onClick={() => onPick(name)}
-        className={`flex min-h-[44px] min-w-0 flex-1 items-center justify-between gap-2 px-3 text-left text-sm ${current === name ? 'font-semibold text-slate-100' : 'text-slate-400'}`}
+        className={`flex min-h-[40px] min-w-0 flex-1 items-center justify-between gap-2 px-3 text-left text-sm ${current === name ? 'font-semibold text-slate-100' : 'text-slate-400'}`}
       >
         <span className="min-w-0 truncate">{label}</span>
         <span className="shrink-0 text-xs text-slate-500">{count.toLocaleString('pt-BR')}</span>
@@ -67,7 +67,7 @@ function GroupList({ groups, total, current, onPick, onHide, kind }: { groups: G
           </button>
         </div>
       )}
-      <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto overscroll-contain pr-1">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-lg">
         {!filter && item(ALL, 'Todos', total)}
         {shown.map((g) => item(g.name, groupLabel(g.name, kind), g.count))}
       </div>
@@ -305,7 +305,7 @@ export default function Browse() {
 
       <div className="lg:flex lg:items-start lg:gap-6">
         {!q && (
-          <aside className="sticky top-4 hidden h-[calc(100dvh-8rem)] w-64 shrink-0 flex-col lg:flex">
+          <aside className="sticky top-4 hidden h-[calc(100dvh-2rem)] w-64 shrink-0 flex-col lg:flex">
             <p className="mb-2 px-3 text-sm text-slate-500">Grupos</p>
             <GroupList groups={groups} total={gdata?.total || 0} current={group} onPick={pickGroup} onHide={hideGroup} kind={kind} />
           </aside>
