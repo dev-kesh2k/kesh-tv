@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowDownAZ, EyeOff, ListOrdered, ListVideo, Search, Tv, X } from 'lucide-react';
 import { api, Channel, Group, Kind, KIND_LABEL, Playlist, Series, useApi } from '../api';
 import { ChannelGrid, SeriesGrid, Shelf, SkeletonGrid } from '../components/ChannelCard';
+import { GuideList } from '../components/GuideList';
 import { Logo, Page } from '../components/Layout';
 import { btnPrimary, Empty, ErrorBox, input, Spinner } from '../components/ui';
 import { useTitle } from '../useTitle';
@@ -312,7 +313,8 @@ export default function Browse() {
               {q && channels.length > 0 && <h2 className="mb-2 mt-6 text-sm font-semibold text-slate-300">Canais e filmes</h2>}
             </>
           )}
-          {channels.length > 0 && <ChannelGrid channels={channels} onChange={update} />}
+          {channels.length > 0 &&
+            (kind === 'live' && !q ? <GuideList channels={channels} onChange={update} /> : <ChannelGrid channels={channels} onChange={update} />)}
           {!loading && !error && !channels.length && !series.length && (
             <Empty icon={<Tv className="h-7 w-7" />} title={q ? 'Nada encontrado' : 'Nada aqui'}>
               {q ? 'Tente outro nome.' : 'Escolha outro grupo ou tipo.'}
