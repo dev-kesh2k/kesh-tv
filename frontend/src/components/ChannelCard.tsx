@@ -120,3 +120,20 @@ export function SeriesGrid({ series }: { series: Series[] }) {
     </div>
   );
 }
+
+/** Grade de cartões "fantasma" enquanto a lista carrega (evita a tela pular quando os dados chegam). */
+export function SkeletonGrid({ count = 12, poster = false }: { count?: number; poster?: boolean }) {
+  return (
+    <div className="grid grid-cols-2 gap-2.5 min-[480px]:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 sm:gap-3" aria-hidden="true">
+      {Array.from({ length: count }, (_, i) => (
+        <div key={i} className="overflow-hidden rounded-2xl border border-ink-700/40 bg-ink-900">
+          <div className={`w-full animate-pulse bg-ink-800 ${poster ? 'aspect-[3/4]' : 'aspect-video'}`} />
+          <div className="space-y-2 p-2.5">
+            <div className="h-3 w-3/4 animate-pulse rounded bg-ink-800" />
+            <div className="h-2.5 w-1/2 animate-pulse rounded bg-ink-800/70" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}

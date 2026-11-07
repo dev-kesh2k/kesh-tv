@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react';
 import { Download, Heart, History, Trash2, Upload } from 'lucide-react';
 import { api, API, Channel, getToken, useApi } from '../api';
-import { ChannelGrid } from '../components/ChannelCard';
+import { ChannelGrid, SkeletonGrid } from '../components/ChannelCard';
 import { useTitle } from '../useTitle';
 import { Page } from '../components/Layout';
-import { btnGhost, Empty, ErrorBox, PageTitle, Spinner } from '../components/ui';
+import { btnGhost, Empty, ErrorBox, PageTitle } from '../components/ui';
 
 interface ImportResult {
   imported: number;
@@ -82,7 +82,7 @@ export function Favorites() {
       <ErrorBox message={error || ioError} />
       {msg && <p className="mb-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2.5 text-sm text-emerald-200">{msg}</p>}
       {loading && !data ? (
-        <Spinner />
+        <SkeletonGrid count={6} />
       ) : list.length ? (
         <ChannelGrid channels={list} onChange={update} />
       ) : (
@@ -119,7 +119,7 @@ export function Recent() {
       />
       <ErrorBox message={error} />
       {loading && !data ? (
-        <Spinner />
+        <SkeletonGrid count={6} poster />
       ) : list.length ? (
         <ChannelGrid channels={list} onChange={update} />
       ) : (
