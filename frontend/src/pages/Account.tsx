@@ -86,6 +86,44 @@ function Users({ me }: { me: User }) {
   );
 }
 
+interface StatsData {
+  playlists: number;
+  live: number;
+  movies: number;
+  series: number;
+  favorites: number;
+  watched: number;
+  hoursWatched: number;
+}
+
+function Stats() {
+  const { data } = useApi<StatsData>('stats');
+  if (!data) return null;
+  const n = (v: number) => v.toLocaleString('pt-BR');
+  const items: [string, string][] = [
+    ['Listas', n(data.playlists)],
+    ['Ao vivo', n(data.live)],
+    ['Filmes', n(data.movies)],
+    ['Séries', n(data.series)],
+    ['Favoritos', n(data.favorites)],
+    ['Horas assistidas*', n(data.hoursWatched)],
+  ];
+  return (
+    <section className={`${card} p-4 sm:p-5`}>
+      <h2 className="mb-3 font-semibold">Resumo</h2>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {items.map(([label, value]) => (
+          <div key={label} className="rounded-xl bg-ink-850 px-3 py-2.5">
+            <p className="text-lg font-bold tabular-nums">{value}</p>
+            <p className="text-xs text-slate-500">{label}</p>
+          </div>
+        ))}
+      </div>
+      <p className="mt-2 text-[11px] text-slate-500">* Filmes e episódios, pela posição salva de cada um.</p>
+    </section>
+  );
+}
+
 export default function Account() {
   const { user, logout, setUser } = useAuth();
   const [name, setName] = useState(user?.name || '');
@@ -112,6 +150,8 @@ export default function Account() {
     <Page>
       <PageTitle title="Conta" subtitle={user.email} />
       <div className="space-y-4">
+        <Stats />
+
         <form onSubmit={saveName} className={`${card} space-y-3 p-4 sm:p-5`}>
           <h2 className="font-semibold">Perfil</h2>
           <input className={input} value={name} required maxLength={80} onChange={(e) => setName(e.target.value)} />

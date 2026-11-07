@@ -86,6 +86,25 @@ api.put('/auth/profile', wrap(async (req, res) => {
   res.json({ user: publicUser(user) });
 }));
 
+// ---------- Resumo da conta ----------
+api.get('/stats', wrap(async (req, res) => {
+  const uid = req.user.id;
+  const [pl, favorites, hist] = await Promise.all([
+    prisma.playlist.aggregate({ where: { userId: uid }, _count: true, _sum: { liveCount: true, movieCount: true, seriesCount: true } }),
+    prisma.favorite.count({ where: { userId: uid } }),
+    prisma.history.aggregate({ where: { userId: uid }, _count: true, _sum: { position: true } }),
+  ]);
+  res.json({
+    playlists: pl._count,
+    live: pl._sum.liveCount || 0,
+    movies: pl._sum.movieCount || 0,
+    series: pl._sum.seriesCount || 0,
+    favorites,
+    watched: hist._count,
+    hoursWatched: Math.round(((hist._sum.position || 0) / 3600) * 10) / 10,
+  });
+}));
+
 // ---------- Preferências ----------
 /** Grupos ocultos: somem dos canais, da busca e das séries (ex.: adultos ou grupos que nunca assiste). */
 api.put('/prefs/hidden-groups', wrap(async (req, res) => {
