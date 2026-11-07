@@ -6,7 +6,11 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.view.View;
+import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebChromeClient;
+import android.widget.FrameLayout;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -14,6 +18,28 @@ import android.webkit.WebViewClient;
 /** Kesh TV para Android: abre o app web publicado num WebView. */
 public class MainActivity extends Activity {
   private WebView web;
+  private FrameLayout root;
+  // Tela cheia do vídeo (botão do player): a view do vídeo cobre o WebView.
+  private View fullView;
+  private WebChromeClient.CustomViewCallback fullCallback;
+
+  @SuppressWarnings("deprecation")
+  private void immersive(boolean on) {
+    int flags = on
+      ? View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY | View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+        | View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+      : View.SYSTEM_UI_FLAG_LAYOUT_STABLE;
+    getWindow().getDecorView().setSystemUiVisibility(flags);
+  }
+
+  private void exitFullscreen() {
+    if (fullView == null) return;
+    root.removeView(fullView);
+    fullView = null;
+    if (fullCallback != null) fullCallback.onCustomViewHidden();
+    fullCallback = null;
+    immersive(isTv());
+  }
 
   /** TV de verdade: modo de interface TV ou aparelho sem toque com recurso leanback (boxes, Fire TV). */
   private boolean isTv() {
@@ -33,7 +59,10 @@ public class MainActivity extends Activity {
   protected void onCreate(Bundle state) {
     super.onCreate(state);
     web = new WebView(this);
-    setContentView(web);
+    root = new FrameLayout(this);
+    root.addView(web, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+    setContentView(root);
+    immersive(isTv());
     WebSettings s = web.getSettings();
     s.setJavaScriptEnabled(true);
     s.setDomStorageEnabled(true);
@@ -47,6 +76,16 @@ public class MainActivity extends Activity {
     s.setUserAgentString(s.getUserAgentString() + " KeshTV-Android/" + BuildConfig.VERSION_NAME + (isTv() ? " (TV)" : ""));
     web.addJavascriptInterface(new Bridge(), "KeshNative");
     web.setWebViewClient(new WebViewClient());
+    web.setWebChromeClient(new WebChromeClient() {
+      @Override public void onShowCustomView(View view, CustomViewCallback callback) {
+        if (fullView != null) { callback.onCustomViewHidden(); return; }
+        fullView = view;
+        fullCallback = callback;
+        root.addView(view, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        immersive(true);
+      }
+      @Override public void onHideCustomView() { exitFullscreen(); }
+    });
     if (state != null) web.restoreState(state);
     else web.loadUrl(BuildConfig.START_URL);
   }
@@ -58,8 +97,15 @@ public class MainActivity extends Activity {
   }
 
   @Override
+  public void onWindowFocusChanged(boolean hasFocus) {
+    super.onWindowFocusChanged(hasFocus);
+    if (hasFocus) immersive(fullView != null || isTv());
+  }
+
+  @Override
   public void onBackPressed() {
-    if (web.canGoBack()) web.goBack();
+    if (fullView != null) exitFullscreen();
+    else if (web.canGoBack()) web.goBack();
     else super.onBackPressed();
   }
 }
