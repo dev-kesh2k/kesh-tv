@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-07 (madrugada) — visual novo
+
+O app deixou o tema genérico (preto + rosa, cartões arredondados iguais) por uma identidade de TV:
+- **Paleta** azul-tinta com texto em tom de papel, âmbar do controle remoto para seleção e foco, vermelho de estúdio só no "ao vivo".
+- **Tipografia** Archivo com eixo de largura: estreita e pesada nos nomes de canal e títulos, como guias de programação impressos.
+- **Canais ao vivo como grade de programação** (número, logo, nome, programa no ar com a barra do horário).
+- Marca nova (placa de canal âmbar com K), abas sublinhadas, pôsteres sem caixa, página da série como guia de episódios, login sem enfeites, Conta e Listas sem pilhas de cartões.
+- Sem rótulos em maiúsculas, pontos médios, fonte monoespaçada ou degradês decorativos; plurais e textos revistos.
+- Corrigido: player da TV com 150 px de altura (erro cortado).
+- App Android 1.1.0 com o ícone e o banner novos.
+
 ## 2026-11-07 (noite) — TV, Android e revisão
 
 ### Adicionado
