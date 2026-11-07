@@ -12,6 +12,7 @@ const TOTAL_TIMEOUT = 15 * 60_000;
 const IDLE_TIMEOUT = 90_000;
 const BATCH = 2000;
 const STALE_MS = 20 * 60_000;
+const RETRY_AFTER_ERROR_MS = 6 * 3600_000;
 
 /** Linhas de um texto (upload) ou de um fluxo de bytes (download). */
 async function* linesOf(source) {
@@ -134,7 +135,8 @@ export async function startSync(playlistId, source) {
       let message = err instanceof HttpError ? err.message : 'Falha ao ler a lista';
       if (ctrl.signal.aborted) message = ctrl.signal.reason?.message === 'idle' ? 'O servidor da lista parou de enviar dados' : 'O download da lista passou de 15 minutos';
       else if (!(err instanceof HttpError)) console.error('sync', playlistId, err);
-      await prisma.playlist.update({ where: { id: playlistId }, data: { status: 'error', error: message, syncStarted: null } }).catch(() => {});
+      // syncStarted fica com a hora da tentativa: a atualização automática espera 6 h antes de tentar de novo.
+      await prisma.playlist.update({ where: { id: playlistId }, data: { status: 'error', error: message, syncStarted: new Date() } }).catch(() => {});
       throw new HttpError(err instanceof HttpError ? err.status : 500, message);
     } finally {
       clearTimeout(timer);
@@ -149,7 +151,14 @@ export function startAutoRefresh() {
   const tick = async () => {
     try {
       const due = await prisma.playlist.findMany({
-        where: { autoRefresh: true, url: { not: null }, status: { not: 'syncing' }, OR: [{ syncedAt: null }, { syncedAt: { lt: new Date(Date.now() - 24 * 3600_000) } }] },
+        where: {
+          autoRefresh: true,
+          url: { not: null },
+          status: { not: 'syncing' },
+          OR: [{ syncedAt: null }, { syncedAt: { lt: new Date(Date.now() - 24 * 3600_000) } }],
+          // Lista com erro (servidor fora do ar): no máximo uma tentativa a cada 6 h, não a cada 30 min.
+          NOT: { status: 'error', syncStarted: { gt: new Date(Date.now() - RETRY_AFTER_ERROR_MS) } },
+        },
         select: { id: true },
       });
       for (const p of due) await startSync(p.id).then((r) => r.done).catch((e) => console.warn('auto-refresh', p.id, e.message));
