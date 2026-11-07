@@ -86,6 +86,16 @@ api.put('/auth/profile', wrap(async (req, res) => {
   res.json({ user: publicUser(user) });
 }));
 
+// ---------- Preferências ----------
+/** Grupos ocultos: somem dos canais, da busca e das séries (ex.: adultos ou grupos que nunca assiste). */
+api.put('/prefs/hidden-groups', wrap(async (req, res) => {
+  const list = Array.isArray(req.body?.groups) ? req.body.groups : null;
+  if (!list) throw new HttpError(400, 'Envie a lista de grupos');
+  const groups = [...new Set(list.filter((g) => typeof g === 'string').map((g) => g.slice(0, 120)))].slice(0, 500);
+  const user = await prisma.user.update({ where: { id: req.user.id }, data: { hiddenGroups: groups } });
+  res.json({ hiddenGroups: user.hiddenGroups });
+}));
+
 // ---------- Usuários (admin) ----------
 api.get('/users', requireAdmin, wrap(async (_req, res) => {
   const users = await prisma.user.findMany({ orderBy: { createdAt: 'asc' }, select: { id: true, name: true, email: true, role: true, createdAt: true } });
@@ -232,17 +242,18 @@ api.get('/groups', wrap(async (req, res) => {
   const kind = kindOf(req.query.kind);
   if (!ids.length) return res.json({ groups: [], total: 0 });
   const stamps = await prisma.playlist.findMany({ where: { id: { in: ids } }, select: { id: true, syncedAt: true }, orderBy: { id: 'asc' } });
-  const key = `${kind}|${stamps.map((p) => `${p.id}:${p.syncedAt?.getTime()}`).join(',')}`;
+  const hidden = req.user.hiddenGroups || [];
+  const key = `${kind}|${hidden.join('\u0001')}|${stamps.map((p) => `${p.id}:${p.syncedAt?.getTime()}`).join(',')}`;
   if (groupCache.has(key)) return res.json(groupCache.get(key));
   const rows =
     kind === 'series'
       ? await prisma.$queryRaw`
         SELECT "groupTitle" AS name, COUNT(DISTINCT COALESCE(NULLIF("seriesName", ''), "name"))::int AS count, MIN("position") AS pos
-        FROM "Channel" WHERE "playlistId" = ANY(${ids}::uuid[]) AND "kind" = 'series'
+        FROM "Channel" WHERE "playlistId" = ANY(${ids}::uuid[]) AND "kind" = 'series' AND NOT ("groupTitle" = ANY(${hidden}::text[]))
         GROUP BY "groupTitle" ORDER BY pos`
       : await prisma.$queryRaw`
         SELECT "groupTitle" AS name, COUNT(*)::int AS count, MIN("position") AS pos
-        FROM "Channel" WHERE "playlistId" = ANY(${ids}::uuid[]) AND "kind" = ${kind}
+        FROM "Channel" WHERE "playlistId" = ANY(${ids}::uuid[]) AND "kind" = ${kind} AND NOT ("groupTitle" = ANY(${hidden}::text[]))
         GROUP BY "groupTitle" ORDER BY pos`;
   const out = { groups: rows.map((r) => ({ name: r.name, count: r.count })), total: rows.reduce((s, r) => s + r.count, 0) };
   if (groupCache.size > 200) groupCache.clear();
@@ -259,6 +270,7 @@ api.get('/channels', wrap(async (req, res) => {
   // Busca sem tipo: canais e filmes (episódios aparecem agrupados em /series).
   where.kind = !q || req.query.kind ? kindOf(req.query.kind) : { not: 'series' };
   if (req.query.group !== undefined && req.query.group !== '__all') where.groupTitle = String(req.query.group);
+  else if (req.user.hiddenGroups?.length) where.groupTitle = { notIn: req.user.hiddenGroups };
   if (q) where.name = { contains: q, mode: 'insensitive' };
   const rows = await prisma.channel.findMany({ where, select: channelSelect, orderBy: [{ playlistId: 'asc' }, { position: 'asc' }], skip: offset, take: limit + 1 });
   res.json({ channels: await decorate(req.user.id, rows.slice(0, limit)), hasMore: rows.length > limit });
@@ -343,6 +355,7 @@ api.get('/series', wrap(async (req, res) => {
     FROM "Channel"
     WHERE "playlistId" = ANY(${ids}::uuid[]) AND "kind" = 'series'
       AND (${group}::text IS NULL OR "groupTitle" = ${group}::text)
+      AND NOT ("groupTitle" = ANY(${req.user.hiddenGroups || []}::text[]))
       AND (${like}::text IS NULL OR COALESCE(NULLIF("seriesName", ''), "name") ILIKE ${like}::text)
     GROUP BY "playlistId", COALESCE(NULLIF("seriesName", ''), "name")
     ORDER BY pos LIMIT ${limit + 1} OFFSET ${offset}`;
