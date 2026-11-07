@@ -16,6 +16,8 @@ on:
       - '.github/workflows/ci.yml'
       - 'docs/**'
       - 'deploy/docker/**'
+      - 'android/**'
+      - '.github/workflows/android.yml'
   workflow_dispatch:
 
 env:
