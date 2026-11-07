@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { Download, Eye, LogOut, Smartphone, Trash2, UserPlus } from 'lucide-react';
-import { api, User, useApi } from '../api';
+import { api, setToken, User, useApi } from '../api';
 import { useAuth } from '../auth';
 import { Page } from '../components/Layout';
 import { btnDanger, btnGhost, btnPrimary, card, ErrorBox, input, PageTitle } from '../components/ui';
@@ -204,7 +204,12 @@ export default function Account() {
   };
   const savePass = async (e: FormEvent) => {
     e.preventDefault();
-    if (await pass.run(() => api.put('auth/password', { current, password }), 'Senha alterada')) {
+    const change = async () => {
+      // O servidor encerra os logins dos outros aparelhos e devolve um token novo para este.
+      const r = await api.put<{ ok: boolean; token?: string }>('auth/password', { current, password });
+      if (r.token) setToken(r.token);
+    };
+    if (await pass.run(change, 'Senha alterada. Os outros aparelhos vão pedir login de novo.')) {
       setCurrent('');
       setPassword('');
     }
