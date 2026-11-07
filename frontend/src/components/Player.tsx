@@ -368,7 +368,7 @@ export function Player({
   }, []);
 
   return (
-    <div ref={box} className="bg-black sm:bg-transparent">
+    <div ref={box} className={`bg-black sm:bg-transparent ${fill ? 'h-full' : ''}`}>
     <div className={`relative w-full overflow-hidden bg-black ${fill ? 'h-full' : 'aspect-video sm:rounded-[6px]'}`}>
       <video ref={video} className="h-full w-full bg-black" controls={controls} playsInline autoPlay title={title} />
       {!controls && state === 'playing' && paused && (
@@ -423,7 +423,7 @@ export function Player({
             <p className="font-semibold">Não foi possível abrir este canal</p>
             <p className="text-sm text-slate-300">O canal pode estar fora do ar no provedor ou usar um formato que este aparelho não toca. Teste o link no VLC com “Copiar link”.</p>
             {detail && <p className="text-xs text-slate-500">Detalhe técnico: {detail}</p>}
-            <button type="button" onClick={retry} className="mt-2 inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-ink-950">
+            <button type="button" onClick={retry} autoFocus className="mt-2 inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-ink-950">
               <RotateCcw className="h-4 w-4" /> Tentar de novo
             </button>
           </div>
