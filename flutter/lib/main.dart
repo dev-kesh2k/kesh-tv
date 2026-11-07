@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'api.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
+import 'player_screen.dart';
 import 'store.dart';
 import 'theme.dart';
 
@@ -38,7 +39,7 @@ class _KeshAppState extends State<KeshApp> {
               void push(Widget w) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => w));
               return HomeScreen(
                 api: api,
-                onOpen: (c) => push(Scaffold(body: Center(child: Text(c.name)))),
+                onOpen: (c) => push(PlayerScreen(api: api, id: c.id)),
                 onSeries: (s) => push(Scaffold(body: Center(child: Text(s.name)))),
                 onFavorites: () {},
                 onAccount: _logout,
