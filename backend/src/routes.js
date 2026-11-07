@@ -3,6 +3,8 @@ import bcrypt from 'bcryptjs';
 import { prisma, HttpError } from './db.js';
 import { signToken, publicUser, requireAuth, tooManyAttempts, recordFailure, clearFailures } from './auth.js';
 import { startSync } from './sync.js';
+import { serveConversion, startConversion, stopUserConversion } from './convert.js';
+import { sign, verify } from './net.js';
 import { logoLink, probeType, proxyLogo, proxyStream, streamLink, typeFromUrl, xtreamHls } from './stream.js';
 
 export const api = Router();
@@ -46,6 +48,8 @@ api.get('/health', wrap(async (_req, res) => {
 // Links assinados (HMAC + validade): o <video> e o <img> não mandam o token de login.
 api.get('/stream', wrap(proxyStream));
 api.get('/logo', wrap(proxyLogo));
+// Arquivos da conversão: o id da sessão é aleatório (128 bits) e só quem iniciou a conversão o recebe.
+api.get('/convert/:sid/:file', wrap(serveConversion));
 
 api.post('/auth/login', wrap(async (req, res) => {
   const email = text(req.body?.email, 'E-mail', { max: 160, required: true }).toLowerCase();
@@ -257,11 +261,20 @@ api.get('/channels/:id/play', wrap(async (req, res) => {
     if (url.startsWith('https://') && !custom) sources.push({ type, via: 'direct', url });
     sources.push({ type, via: 'proxy', url: streamLink(url, ch.userAgent, ch.referrer) });
   };
+  // Conversão no servidor (ffmpeg → HLS): link assinado com a URL original, usado em POST /convert/start.
+  const convert = { type: 'convert', via: 'proxy', url: sign(ch.url, { ua: ch.userAgent, ref: ch.referrer, ttlSec: 12 * 3600 }) };
   let type = typeFromUrl(ch.url);
   const alt = ch.kind === 'live' && type !== 'hls' ? xtreamHls(ch.url) : null;
   if (alt) add(alt, 'hls');
   if (type === 'unknown') type = await probeType(ch.url, ch.userAgent, ch.referrer);
-  add(ch.url, type === 'unknown' ? 'ts' : type);
+  if (type === 'file' && !/\.(mp4|m4v|webm|mp3|aac)$/i.test(ch.url.split('?')[0])) {
+    // MKV, AVI, MOV…: o navegador não toca (ou só às vezes) → converte direto.
+    sources.push(convert);
+  } else {
+    add(ch.url, type === 'unknown' ? 'ts' : type);
+    // MP4 com codec que o navegador não decodifica (ex.: HEVC) cai na conversão.
+    if (type === 'file') sources.push(convert);
+  }
   const [decorated] = await decorate(req.user.id, [ch]);
   res.json({ channel: decorated, sources, original: ch.url });
 }));
@@ -346,6 +359,19 @@ api.post('/channels/:id/watch', wrap(async (req, res) => {
     SELECT "channelId" FROM "History" WHERE "userId" = ${req.user.id}::uuid ORDER BY "watchedAt" DESC LIMIT 100)`;
   res.json({ ok: true });
 }));
+
+// ---------- Conversão (arquivos que o navegador não toca) ----------
+api.post('/convert/start', wrap(async (req, res) => {
+  const link = new URLSearchParams(String(req.body?.link || ''));
+  const { url, ua, ref } = verify(Object.fromEntries(link));
+  const out = await startConversion({ url, ua, ref, offset: Number(req.body?.t) || 0, userId: req.user.id });
+  res.json({ ...out, playlist: `convert/${out.sid}/index.m3u8` });
+}));
+
+api.delete('/convert/:sid', (req, res) => {
+  stopUserConversion(req.user.id, String(req.params.sid));
+  res.json({ ok: true });
+});
 
 // ---------- Favoritos e recentes ----------
 api.get('/favorites', wrap(async (req, res) => {
