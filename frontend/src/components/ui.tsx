@@ -23,10 +23,10 @@ export function Spinner({ label }: { label?: string }) {
 
 export function Empty({ icon, title, children }: { icon: ReactNode; title: string; children?: ReactNode }) {
   return (
-    <div className="mx-auto flex max-w-sm flex-col items-center px-4 py-14 text-center">
-      <div className="mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-ink-800 text-slate-400">{icon}</div>
-      <h3 className="text-base font-semibold text-slate-100">{title}</h3>
-      {children && <div className="mt-2 text-sm text-slate-400">{children}</div>}
+    <div className="max-w-md py-12">
+      <div className="mb-3 text-slate-500">{icon}</div>
+      <h3 className="font-display text-xl text-slate-100">{title}</h3>
+      {children && <div className="mt-1.5 text-sm text-slate-400">{children}</div>}
     </div>
   );
 }
@@ -40,7 +40,7 @@ export function PageTitle({ title, subtitle, action }: { title: string; subtitle
   return (
     <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
       <div className="min-w-0">
-        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{title}</h1>
+        <h1 className="font-display text-[1.9rem] leading-tight text-slate-100 sm:text-[2.3rem]">{title}</h1>
         {subtitle && <p className="mt-0.5 text-sm text-slate-400">{subtitle}</p>}
       </div>
       {action}
