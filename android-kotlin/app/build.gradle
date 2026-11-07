@@ -59,3 +59,8 @@ dependencies {
   implementation 'io.coil-kt:coil-compose:2.6.0'
   implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
 }
+
+dependencies {
+  testImplementation 'junit:junit:4.13.2'
+  testImplementation 'org.json:json:20231013'
+}
