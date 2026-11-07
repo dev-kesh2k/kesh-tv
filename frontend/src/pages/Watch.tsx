@@ -4,6 +4,7 @@ import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, Heart } from 'lucide
 import { api, Channel, KIND_LABEL, seriesLink, Source, toggleFavorite } from '../api';
 import { ChannelLogo } from '../components/ChannelCard';
 import { Player } from '../components/Player';
+import { Guide } from '../components/Guide';
 import { btnGhost, ErrorBox, Spinner } from '../components/ui';
 
 interface PlayInfo {
@@ -169,6 +170,7 @@ export default function Watch() {
                 </button>
               </div>
             )}
+            {ch?.kind === 'live' && <Guide channelId={ch.id} />}
           </div>
         </div>
 
