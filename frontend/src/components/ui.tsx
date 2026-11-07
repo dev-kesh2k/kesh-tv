@@ -5,6 +5,8 @@ export const btn =
   'inline-flex min-h-[44px] items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold transition-colors disabled:opacity-50 disabled:pointer-events-none';
 export const btnPrimary = `${btn} bg-brand text-ink-950 hover:bg-brand-dark`;
 export const btnGhost = `${btn} bg-ink-800 text-slate-200 hover:bg-ink-700`;
+// Ação secundária só em texto (sem fundo): deixa os botões principais em evidência.
+export const btnQuiet = 'inline-flex min-h-[40px] items-center gap-1.5 rounded-md px-2 text-sm text-slate-400 transition-colors hover:bg-ink-900 hover:text-slate-100 disabled:opacity-40';
 export const btnDanger = `${btn} bg-red-500/10 text-red-300 hover:bg-red-500/20`;
 export const input =
   'w-full min-h-[44px] rounded-md border border-ink-700 bg-ink-900 px-3.5 text-[16px] text-slate-100 placeholder:text-slate-500 outline-none focus:border-brand focus:ring-2 focus:ring-brand/30';
