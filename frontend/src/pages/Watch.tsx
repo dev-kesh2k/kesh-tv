@@ -10,7 +10,17 @@ interface PlayInfo {
   channel: Channel;
   sources: Source[];
   original: string;
+  /** Segundos para continuar de onde parou (0 = do início). */
+  resume: number;
+  duration: number;
 }
+
+const fmtTime = (t: number) => {
+  const s = Math.floor(t);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  return h ? `${h}:${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}` : `${m}:${String(s % 60).padStart(2, '0')}`;
+};
 interface Around {
   channels: Channel[];
   prev: string | null;
@@ -66,6 +76,23 @@ export default function Watch() {
     api.post(`channels/${id}/watch`).catch(() => {});
   }, [id]);
 
+  // Continuar de onde parou: começa no ponto salvo; "Recomeçar" volta ao início.
+  // Calculado na hora (sem efeito) para o player já montar com o ponto certo.
+  const [restarted, setRestarted] = useState(false);
+  const [restartKey, setRestartKey] = useState(0);
+  useEffect(() => setRestarted(false), [id]);
+  const startAt = restarted ? 0 : info?.resume || 0;
+  const restart = () => {
+    setRestarted(true);
+    setRestartKey((k) => k + 1);
+  };
+  const onProgress = useCallback(
+    (position: number, duration: number) => {
+      api.put(`channels/${id}/progress`, { position, duration }).catch(() => {});
+    },
+    [id],
+  );
+
   const fav = async () => {
     if (!info) return;
     const favorite = await toggleFavorite(info.channel);
@@ -90,11 +117,21 @@ export default function Watch() {
       <div className="xl:flex xl:items-start xl:gap-6">
         <div className="min-w-0 flex-1">
           <div className="sticky top-0 z-20 bg-black pt-[env(safe-area-inset-top)] sm:static sm:bg-transparent sm:pt-0">
-            {info ? <Player sources={info.sources} title={ch?.name || ''} onPlaying={onPlaying} /> : <div className="grid aspect-video w-full place-items-center bg-black sm:rounded-2xl">{error ? null : <Spinner />}</div>}
+            {info ? <Player key={restartKey} sources={info.sources} title={ch?.name || ''} onPlaying={onPlaying} startAt={startAt} onProgress={ch?.kind === 'live' ? undefined : onProgress} /> : <div className="grid aspect-video w-full place-items-center bg-black sm:rounded-2xl">{error ? null : <Spinner />}</div>}
           </div>
 
           <div className="px-3 pt-3 sm:px-0">
             <ErrorBox message={error} />
+            {startAt > 0 && (
+              <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-brand/30 bg-brand/10 px-3.5 py-2 text-sm">
+                <span>
+                  Continuando de <b className="font-mono">{fmtTime(startAt)}</b>
+                </span>
+                <button type="button" onClick={restart} className="min-h-[40px] shrink-0 rounded-lg px-3 font-semibold text-brand-light hover:bg-brand/15">
+                  Recomeçar
+                </button>
+              </div>
+            )}
             <div className="flex items-start gap-3">
               <button type="button" onClick={() => (window.history.length > 1 ? nav(-1) : nav('/'))} aria-label="Voltar" className="-ml-1 grid h-11 w-11 shrink-0 place-items-center rounded-full text-slate-400 hover:bg-ink-800">
                 <ArrowLeft className="h-5 w-5" />
