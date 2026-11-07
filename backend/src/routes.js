@@ -355,8 +355,11 @@ api.get('/channels/:id/around', wrap(async (req, res) => {
       take: 3000,
     });
     const i = eps.findIndex((e) => e.id === ch.id);
-    const list = eps.slice(Math.max(0, i - 30), i + 61);
-    return res.json({ channels: await decorate(req.user.id, list), prev: eps[i - 1]?.id || null, next: eps[i + 1]?.id || null, series: ch.seriesName });
+    // Série com mais de 3000 episódios e este fora da janela: cai na regra do grupo (não pula para o 1º episódio).
+    if (i >= 0) {
+      const list = eps.slice(Math.max(0, i - 30), i + 61);
+      return res.json({ channels: await decorate(req.user.id, list), prev: eps[i - 1]?.id || null, next: eps[i + 1]?.id || null, series: ch.seriesName });
+    }
   }
   const base = { playlistId: ch.playlistId, kind: ch.kind, groupTitle: ch.groupTitle };
   const [before, after] = await Promise.all([
