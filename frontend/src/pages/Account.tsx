@@ -59,7 +59,7 @@ function Users({ me }: { me: User }) {
           <li key={u.id} className="flex items-center gap-3 py-2.5">
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">
-                {u.name} {u.role === 'admin' && <span className="ml-1 rounded bg-brand/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-brand-light">admin</span>}
+                {u.name} {u.role === 'admin' && <span className="ml-1 text-xs font-normal text-slate-500">(administrador)</span>}
               </p>
               <p className="truncate text-xs text-slate-500">{u.email}</p>
             </div>

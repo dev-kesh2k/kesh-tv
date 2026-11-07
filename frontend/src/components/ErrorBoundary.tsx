@@ -18,7 +18,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
     return (
       <div className="grid min-h-[60dvh] place-items-center px-4 text-center">
         <div className="max-w-sm">
-          <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-amber-500/10 text-amber-400">
+          <div className="mx-auto mb-4 grid place-items-center text-brand">
             <TriangleAlert className="h-7 w-7" />
           </div>
           <h1 className="text-lg font-semibold">Algo deu errado nesta tela</h1>
