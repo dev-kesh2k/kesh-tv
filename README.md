@@ -73,7 +73,7 @@
 **Plataformas**
 - **Celular, tablet e computador** (layout mobile-first, PWA instalável que abre sem internet).
 - **TV**: modo TV automático (Android TV, Fire TV, Samsung, LG) com escala para telas de 32" a 100", navegação pelo controle remoto e player em tela cheia.
-- **App Android** (celular e Android TV) com gerador de APK.
+- **App Android** (celular e Android TV) em três versões — WebView, nativo em Kotlin e Flutter — com gerador de APK.
 
 **Outros**
 - Vários usuários (cada um com as próprias listas), resumo em Conta e proxy seguro para streams `http://`, servidores sem CORS ou com `User-Agent`/`Referer` próprios.
@@ -120,21 +120,28 @@ Abra **http://localhost:8080**, entre com `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSW
 
 ## App Android (celular e Android TV)
 
-[**⬇️ Baixar kesh-tv.apk**](https://github.com/dev-kesh2k/kesh-tv/releases/latest/download/kesh-tv.apk) — funciona em celulares e em Android TV (TV Box, Fire TV, Chromecast com Google TV), com ícone na tela inicial da TV, navegação pelo controle remoto e escala automática para TVs de 32" a 100".
+Três versões, todas para celular e Android TV (TV Box, Fire TV, Chromecast com Google TV), com ícone na tela inicial da TV e navegação pelo controle remoto. Usam a mesma assinatura e podem ficar instaladas juntas:
+
+| Versão | Download | Como é feita |
+| --- | --- | --- |
+| **Padrão (WebView)** | [kesh-tv.apk](https://github.com/dev-kesh2k/kesh-tv/releases/latest/download/kesh-tv.apk) | o site publicado dentro de um app (`android/`). O mais leve (~30 KB); atualizações do site chegam sem reinstalar, com escala automática para TVs de 32" a 100". |
+| **Nativo (Kotlin)** | [kesh-tv-kotlin.apk](https://github.com/dev-kesh2k/kesh-tv/releases/latest/download/kesh-tv-kotlin.apk) | Kotlin + Jetpack Compose, player Media3/ExoPlayer (`android-kotlin/`). Toca o link original direto no aparelho (TS, MKV, HLS…) e cai para o servidor se falhar. |
+| **Flutter** | [kesh-tv-flutter.apk](https://github.com/dev-kesh2k/kesh-tv/releases/latest/download/kesh-tv-flutter.apk) | Flutter/Dart, player `video_player` (`flutter/`). Mesmo código serve de base para iOS. |
+
+Os apps nativos (Kotlin e Flutter) conversam com a API (`/api`): login, abas Ao vivo / Filmes / Séries, grupos, busca, grade de programação, temporadas e episódios, favoritos, vistos por último, retomada de filmes e troca de canal com ↑/↓ ou CH+/CH− no controle. O endereço do servidor pode ser trocado na tela de login.
 
 ### Gerar o APK
 
-- **Pelo GitHub:** Actions → *APK Android* → *Run workflow* (ou crie uma tag `v1.2.3`). Publica uma Release com `kesh-tv.apk`. A assinatura usa os segredos `KESH_KEYSTORE_B64` e `KESH_KEYSTORE_PASSWORD`.
+- **Pelo GitHub:** Actions → *APK Android* → *Run workflow*, escolha **todos**, **webview**, **kotlin** ou **flutter** e a versão (uma tag `v1.2.3` gera os três). Publica uma Release com `kesh-tv.apk`, `kesh-tv-kotlin.apk` e `kesh-tv-flutter.apk`. A assinatura usa os segredos `KESH_KEYSTORE_B64` e `KESH_KEYSTORE_PASSWORD`. Em PRs, só compila o app que mudou.
 - **Na sua máquina (só precisa de Docker):**
 
   ```bash
-  android/build-apk.sh 1.2.0                                   # aponta para o servidor padrão
-  android/build-apk.sh 1.2.0 https://meu-servidor/kesh-tv/     # seu próprio servidor
+  ./build-apk.sh                                            # pergunta: 1) WebView 2) Kotlin 3) Flutter 4) Todos
+  ./build-apk.sh kotlin 1.2.0                               # um só, apontando para o servidor padrão
+  ./build-apk.sh todos 1.2.0 https://meu-servidor/kesh-tv/  # os três, para o seu servidor
   ```
 
-  Na primeira vez cria a chave de assinatura em `android/keystore/` (fora do git). **Guarde uma cópia**: sem a mesma chave as próximas versões não instalam por cima.
-
-O app é um WebView que abre o Kesh TV publicado: atualizações do site chegam sem reinstalar. Ele informa ao site que está numa TV (modo TV automático) e mantém a tela acesa durante o vídeo.
+  Os APKs saem em `dist/`. Na primeira vez cria a chave de assinatura em `android/keystore/` (fora do git). **Guarde uma cópia**: sem a mesma chave as próximas versões não instalam por cima. (`android/build-apk.sh` continua funcionando e gera só o WebView.)
 
 ## Modo TV e controle remoto
 
@@ -241,7 +248,10 @@ Os testes cobrem o leitor M3U e XMLTV, links assinados e proxy HLS, bloqueio de 
 ```
 backend/    API Express + Prisma (src/, prisma/ com migrações, test/), Dockerfile com ffmpeg
 frontend/   React + Vite + Tailwind (src/pages, src/components, platform/spatial/tvScale para TV)
-android/    app Android (WebView) + build-apk.sh (gerador de APK)
+android/          app Android WebView
+android-kotlin/   app Android nativo (Kotlin, Jetpack Compose, Media3)
+flutter/          app Flutter (Android; base para iOS)
+build-apk.sh      gerador de APK (WebView, Kotlin, Flutter ou todos)
 deploy/docker/  instalação com docker compose
 docs/       prints e imagem de prévia
 .github/    CI, deploy, APK Android, Dependabot, modelos de issue/PR
@@ -268,8 +278,8 @@ docs/       prints e imagem de prévia
 | Variável / propriedade | Para quê |
 | --- | --- |
 | `KESH_KEYSTORE`, `KESH_KEYSTORE_PASSWORD`, `KESH_KEY_ALIAS`, `KESH_KEY_PASSWORD` | chave de assinatura (sem ela, o release sai com a chave de depuração) |
-| `-PstartUrl=` | endereço do Kesh TV que o app abre |
-| `-PversionName=` / `-PversionCode=` | versão do app |
+| `-PstartUrl=` (WebView e Kotlin), `--dart-define=KESH_SERVER=` (Flutter) | endereço do Kesh TV que o app abre |
+| `-PversionName=` / `-PversionCode=` (Gradle), `--build-name` / `--build-number` (Flutter) | versão do app |
 | Segredos do GitHub `KESH_KEYSTORE_B64`, `KESH_KEYSTORE_PASSWORD` | assinatura no workflow *APK Android* |
 
 ## Solução de problemas
