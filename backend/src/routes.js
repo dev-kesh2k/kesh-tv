@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { prisma, HttpError } from './db.js';
 import { signToken, publicUser, requireAuth, tooManyAttempts, recordFailure, clearFailures } from './auth.js';
 import { startSync } from './sync.js';
+import { cleanSeconds, resumePoint, watchedFraction } from './progress.js';
 import { serveConversion, startConversion, stopUserConversion } from './convert.js';
 import { sign, verify } from './net.js';
 import { logoLink, probeType, proxyLogo, proxyStream, streamLink, typeFromUrl, xtreamHls } from './stream.js';
@@ -282,7 +283,9 @@ api.get('/channels/:id/play', wrap(async (req, res) => {
     if (type === 'file') sources.push(convert);
   }
   const [decorated] = await decorate(req.user.id, [ch]);
-  res.json({ channel: decorated, sources, original: ch.url });
+  // Filmes e episódios: posição para "continuar de onde parou".
+  const hist = ch.kind === 'live' ? null : await prisma.history.findUnique({ where: { userId_channelId: { userId: req.user.id, channelId: ch.id } } });
+  res.json({ channel: decorated, sources, original: ch.url, resume: hist ? resumePoint(hist.position, hist.duration) : 0, duration: hist?.duration || 0 });
 }));
 
 /** Vizinhos: episódios da mesma série (em ordem) ou canais do mesmo grupo — anterior/próximo e lista para trocar. */
@@ -366,6 +369,22 @@ api.post('/channels/:id/watch', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
+/** Progresso de filmes/episódios (o player manda a cada ~15 s e ao sair). */
+api.put('/channels/:id/progress', wrap(async (req, res) => {
+  const ch = await ownChannel(req);
+  const position = cleanSeconds(req.body?.position);
+  const duration = cleanSeconds(req.body?.duration) ?? 0;
+  if (position === null) throw new HttpError(400, 'Posição inválida');
+  if (ch.kind === 'live') return res.json({ ok: true });
+  const data = { position, ...(duration ? { duration } : {}), watchedAt: new Date() };
+  await prisma.history.upsert({
+    where: { userId_channelId: { userId: req.user.id, channelId: ch.id } },
+    update: data,
+    create: { userId: req.user.id, channelId: ch.id, ...data },
+  });
+  res.json({ ok: true });
+}));
+
 // ---------- Conversão (arquivos que o navegador não toca) ----------
 api.post('/convert/start', wrap(async (req, res) => {
   const link = new URLSearchParams(String(req.body?.link || ''));
@@ -399,7 +418,14 @@ api.delete('/favorites/:id', wrap(async (req, res) => {
 api.get('/history', wrap(async (req, res) => {
   const rows = await prisma.history.findMany({ where: { userId: req.user.id }, include: { channel: { select: channelSelect } }, orderBy: { watchedAt: 'desc' }, take: 60 });
   const list = await decorate(req.user.id, rows.map((r) => r.channel));
-  res.json({ channels: list.map((c, i) => ({ ...c, watchedAt: rows[i].watchedAt })) });
+  res.json({
+    channels: list.map((c, i) => ({
+      ...c,
+      watchedAt: rows[i].watchedAt,
+      position: resumePoint(rows[i].position, rows[i].duration),
+      progress: watchedFraction(rows[i].position, rows[i].duration),
+    })),
+  });
 }));
 
 api.delete('/history', wrap(async (req, res) => {
