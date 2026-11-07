@@ -18,3 +18,10 @@ test('URLs com IPv6 interno são recusadas antes de qualquer conexão', async ()
     await assert.rejects(assertPublic(u), /não permitido/, u);
   }
 });
+
+test('safeFetch respeita pedido já cancelado', async () => {
+  const { safeFetch } = await import('../src/net.js');
+  const ctrl = new AbortController();
+  ctrl.abort(new Error('fechou'));
+  await assert.rejects(safeFetch('http://1.1.1.1/', { signal: ctrl.signal }), /fechou/);
+});
