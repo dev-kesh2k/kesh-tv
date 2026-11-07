@@ -48,7 +48,8 @@ export function installSpatialNav() {
     const typing = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT');
 
     if (BACK_KEYS.has(e.key) || BACK_CODES.has(e.keyCode) || (e.key === 'Backspace' && !typing)) {
-      if (window.history.length > 1) {
+      // Só volta dentro do app (o React Router guarda o índice da tela em history.state.idx).
+      if ((window.history.state?.idx ?? 0) > 0) {
         e.preventDefault();
         window.history.back();
       }
