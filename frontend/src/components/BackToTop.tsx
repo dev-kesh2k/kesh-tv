@@ -16,7 +16,7 @@ export function BackToTop() {
       type="button"
       aria-label="Voltar ao topo"
       onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-      className="fixed bottom-[calc(76px+env(safe-area-inset-bottom))] right-4 z-30 grid h-12 w-12 place-items-center rounded-full bg-brand text-white shadow-xl shadow-black/40 transition hover:bg-brand-dark lg:bottom-6 lg:right-6"
+      className="fixed bottom-[calc(76px+env(safe-area-inset-bottom))] right-4 z-30 grid h-12 w-12 place-items-center rounded-full bg-brand text-ink-950 shadow-xl shadow-black/40 transition hover:bg-brand-dark lg:bottom-6 lg:right-6"
     >
       <ArrowUp className="h-5 w-5" />
     </button>

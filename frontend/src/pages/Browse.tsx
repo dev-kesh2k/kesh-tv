@@ -280,7 +280,7 @@ export default function Browse() {
               key={k}
               type="button"
               onClick={() => set({ tipo: k === 'live' ? null : k, grupo: null })}
-              className={`min-h-[40px] shrink-0 rounded-full px-4 text-sm font-semibold transition ${kind === k ? 'bg-brand text-white' : 'bg-ink-800 text-slate-300 hover:bg-ink-700'}`}
+              className={`min-h-[40px] shrink-0 rounded-full px-4 text-sm font-semibold transition ${kind === k ? 'bg-brand text-ink-950' : 'bg-ink-800 text-slate-300 hover:bg-ink-700'}`}
             >
               {KIND_LABEL[k]} <span className="ml-1 text-xs opacity-70">{counts[k].toLocaleString('pt-BR')}</span>
             </button>
