@@ -1,0 +1,27 @@
+plugins { id 'com.android.application' }
+
+// Endereço do Kesh TV publicado (troque com -PstartUrl=... para outro servidor).
+def startUrl = project.findProperty('startUrl') ?: 'https://central-apps-hub.com.br/kesh-tv/'
+def appVersionCode = (project.findProperty('versionCode') ?: '1') as int
+def appVersionName = project.findProperty('versionName') ?: '1.0.0'
+
+android {
+  namespace 'br.com.centralappshub.keshtv'
+  compileSdk 34
+  defaultConfig {
+    applicationId 'br.com.centralappshub.keshtv'
+    minSdk 22
+    targetSdk 34
+    versionCode appVersionCode
+    versionName appVersionName
+    buildConfigField 'String', 'START_URL', "\"${startUrl}\""
+  }
+  buildFeatures { buildConfig true }
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+  buildTypes {
+    release { minifyEnabled false }
+  }
+}
