@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Film, Heart, Clapperboard, Tv, X } from 'lucide-react';
-import { apiUrl, Channel, programmeProgress, Series, seriesLink, toggleFavorite } from '../api';
+import { apiUrl, Channel, groupLabel, programmeProgress, Series, seriesLink, toggleFavorite } from '../api';
 
 const KIND_ICON = { live: Tv, movie: Film, series: Clapperboard };
 
@@ -98,7 +98,7 @@ export function ChannelCard({ channel, onChange, onRemove }: { channel: Channel;
               {channel.now.title}
             </p>
           ) : (
-            channel.group && <p className="mt-0.5 truncate text-[11px] text-slate-500">{channel.group}</p>
+            channel.group && <p className="mt-0.5 truncate text-[11px] text-slate-500">{groupLabel(channel.group, channel.kind)}</p>
           )}
         </div>
         <button
