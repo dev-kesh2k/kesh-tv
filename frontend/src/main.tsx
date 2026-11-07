@@ -5,7 +5,9 @@ import App from './App';
 import { AuthProvider } from './auth';
 import './index.css';
 import { installSpatialNav } from './spatial';
+import { applyPlatformClasses } from './platform';
 
+applyPlatformClasses();
 installSpatialNav();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
