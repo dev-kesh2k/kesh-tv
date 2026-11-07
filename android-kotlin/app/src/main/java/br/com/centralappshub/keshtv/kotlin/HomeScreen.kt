@@ -7,7 +7,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -29,6 +36,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -104,6 +113,10 @@ fun HomeScreen(api: Api, onOpen: (Channel) -> Unit, onSeries: (Series) -> Unit, 
   BackHandler(enabled = searching) { searching = false; query = "" }
   LaunchedEffect(searching) { if (searching) runCatching { searchFocus.requestFocus() } }
   val tv = isTv()
+  val focusManager = LocalFocusManager.current
+  val seriesGrid = rememberLazyGridState()
+  val posterGrid = rememberLazyGridState()
+  val liveList = rememberLazyListState()
   val side = sideMargin()
 
   Column(Modifier.fillMaxSize().background(Kesh.Ink)) {
@@ -111,7 +124,16 @@ fun HomeScreen(api: Api, onOpen: (Channel) -> Unit, onSeries: (Series) -> Unit, 
       OutlinedTextField(
         query, { query = it }, singleLine = true, placeholder = { Text("Buscar canal, filme ou série") },
         leadingIcon = { Icon(Icons.Outlined.Search, null) },
-        modifier = Modifier.fillMaxWidth().padding(horizontal = side, vertical = 8.dp).focusRequester(searchFocus),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = side, vertical = 8.dp).focusRequester(searchFocus)
+          // No campo de texto as setas ▲▼ ficariam presas no cursor: no controle remoto elas saem do campo.
+          .onPreviewKeyEvent { e ->
+            if (e.type != KeyEventType.KeyDown) false
+            else when (e.key) {
+              Key.DirectionDown -> focusManager.moveFocus(FocusDirection.Down)
+              Key.DirectionUp -> focusManager.moveFocus(FocusDirection.Up)
+              else -> false
+            }
+          },
       )
     } else {
       // Ao vivo / Filmes / Séries e o botão de busca na mesma linha.
@@ -133,17 +155,17 @@ fun HomeScreen(api: Api, onOpen: (Channel) -> Unit, onSeries: (Series) -> Unit, 
       val gridCells = GridCells.Adaptive(if (tv) 150.dp else 120.dp)
       val listPad = PaddingValues(start = side, end = side, top = 4.dp, bottom = 24.dp)
       when {
-        showSeries -> LazyVerticalGrid(gridCells, contentPadding = listPad) {
+        showSeries -> LazyVerticalGrid(gridCells, state = seriesGrid, contentPadding = listPad) {
           itemsIndexed(series) { i, s ->
             if (i == series.size - 6 && hasMore && !loading) LaunchedEffect(series.size) { load(series.size) }
-            Poster(s.logo, s.name, if (s.seasons > 1) "${s.seasons} temporadas" else "${s.episodes} episódios") { onSeries(s) }
+            Poster(s.logo, s.name, if (s.seasons > 1) "${s.seasons} temporadas" else "${s.episodes} episódios", modifier = Modifier.keepVisible(seriesGrid, i)) { onSeries(s) }
           }
         }
         kind == "live" && query.isEmpty() -> Row(Modifier.fillMaxSize().padding(start = side, end = side, bottom = 20.dp)) {
-          LazyColumn(Modifier.weight(if (tv) 0.6f else 1f), contentPadding = PaddingValues(top = 4.dp, bottom = 24.dp)) {
+          LazyColumn(Modifier.weight(if (tv) 0.6f else 1f), state = liveList, contentPadding = PaddingValues(top = 4.dp, bottom = 24.dp)) {
             itemsIndexed(channels, key = { _, c -> c.id }) { i, c ->
               if (i == channels.size - 10 && hasMore && !loading) LaunchedEffect(channels.size) { load(channels.size) }
-              GuideRow(c, onFocus = { focusedChannel = it }) { onOpen(c) }
+              GuideRow(c, Modifier.keepVisible(liveList, i), onFocus = { focusedChannel = it }) { onOpen(c) }
             }
           }
           if (tv && channels.isNotEmpty()) {
@@ -151,10 +173,10 @@ fun HomeScreen(api: Api, onOpen: (Channel) -> Unit, onSeries: (Series) -> Unit, 
             ChannelDetails(focusedChannel ?: channels.first(), Modifier.weight(0.4f).fillMaxHeight().padding(top = 7.dp))
           }
         }
-        else -> LazyVerticalGrid(gridCells, contentPadding = listPad) {
+        else -> LazyVerticalGrid(gridCells, state = posterGrid, contentPadding = listPad) {
           itemsIndexed(channels) { i, c ->
             if (i == channels.size - 6 && hasMore && !loading) LaunchedEffect(channels.size) { load(channels.size) }
-            Poster(c.logo, c.name, groupLabel(c.group, c.kind), c.progress) { onOpen(c) }
+            Poster(c.logo, c.name, groupLabel(c.group, c.kind), c.progress, Modifier.keepVisible(posterGrid, i)) { onOpen(c) }
           }
         }
       }
