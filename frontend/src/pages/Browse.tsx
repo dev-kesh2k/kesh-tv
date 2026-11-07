@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ChevronDown, EyeOff, Layers, ListVideo, Search, Tv, X } from 'lucide-react';
+import { ArrowDownAZ, ChevronDown, EyeOff, Layers, ListOrdered, ListVideo, Search, Tv, X } from 'lucide-react';
 import { api, Channel, Group, Kind, KIND_LABEL, Playlist, Series, useApi } from '../api';
 import { ChannelGrid, SeriesGrid, Shelf, SkeletonGrid } from '../components/ChannelCard';
 import { Logo, Page } from '../components/Layout';
@@ -13,10 +13,17 @@ const ALL = '__all';
 
 function GroupList({ groups, total, current, onPick, onHide }: { groups: Group[]; total: number; current: string; onPick: (g: string) => void; onHide: (g: string) => void }) {
   const [filter, setFilter] = useState('');
+  // Ordem A–Z ou a da lista (lembrada neste aparelho).
+  const [az, setAz] = useState(() => localStorage.getItem('kesh-tv:grupos-az') === '1');
+  const toggleAz = () => {
+    localStorage.setItem('kesh-tv:grupos-az', az ? '0' : '1');
+    setAz(!az);
+  };
   const shown = useMemo(() => {
     const f = filter.trim().toLowerCase();
-    return f ? groups.filter((g) => (g.name || 'Sem grupo').toLowerCase().includes(f)) : groups;
-  }, [groups, filter]);
+    const list = f ? groups.filter((g) => (g.name || 'Sem grupo').toLowerCase().includes(f)) : groups;
+    return az ? [...list].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR', { sensitivity: 'base' })) : list;
+  }, [groups, filter, az]);
   const item = (name: string, label: string, count: number) => (
     <div key={name} className={`group/item flex items-center rounded-xl transition ${current === name ? 'bg-brand/15' : 'hover:bg-ink-800'}`}>
       <button
@@ -43,9 +50,20 @@ function GroupList({ groups, total, current, onPick, onHide }: { groups: Group[]
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {groups.length > 8 && (
-        <div className="relative mb-2">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-          <input className={`${input} pl-9`} placeholder="Filtrar grupos" value={filter} onChange={(e) => setFilter(e.target.value)} />
+        <div className="mb-2 flex gap-2">
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            <input className={`${input} pl-9`} placeholder="Filtrar grupos" value={filter} onChange={(e) => setFilter(e.target.value)} />
+          </div>
+          <button
+            type="button"
+            onClick={toggleAz}
+            aria-label={az ? 'Ordem da lista' : 'Ordem alfabética'}
+            title={az ? 'Voltar à ordem da lista' : 'Ordenar de A a Z'}
+            className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-ink-700 ${az ? 'bg-brand/15 text-brand-light' : 'bg-ink-900 text-slate-400'}`}
+          >
+            {az ? <ArrowDownAZ className="h-5 w-5" /> : <ListOrdered className="h-5 w-5" />}
+          </button>
         </div>
       )}
       <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto overscroll-contain pr-1">
