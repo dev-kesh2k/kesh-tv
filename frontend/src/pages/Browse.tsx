@@ -1,0 +1,231 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ChevronDown, Layers, ListVideo, Search, Tv, X } from 'lucide-react';
+import { api, Channel, Group, Kind, KIND_LABEL, Playlist, useApi } from '../api';
+import { ChannelGrid } from '../components/ChannelCard';
+import { Logo, Page } from '../components/Layout';
+import { btnPrimary, Empty, ErrorBox, input, Spinner } from '../components/ui';
+
+const PAGE = 60;
+const ALL = '__all';
+
+function GroupList({ groups, total, current, onPick }: { groups: Group[]; total: number; current: string; onPick: (g: string) => void }) {
+  const [filter, setFilter] = useState('');
+  const shown = useMemo(() => {
+    const f = filter.trim().toLowerCase();
+    return f ? groups.filter((g) => (g.name || 'Sem grupo').toLowerCase().includes(f)) : groups;
+  }, [groups, filter]);
+  const item = (name: string, label: string, count: number) => (
+    <button
+      key={name}
+      type="button"
+      onClick={() => onPick(name)}
+      className={`flex min-h-[44px] w-full items-center justify-between gap-2 rounded-xl px-3 text-left text-sm transition ${current === name ? 'bg-brand/15 font-semibold text-brand-light' : 'text-slate-300 hover:bg-ink-800'}`}
+    >
+      <span className="min-w-0 truncate">{label}</span>
+      <span className="shrink-0 text-xs text-slate-500">{count.toLocaleString('pt-BR')}</span>
+    </button>
+  );
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      {groups.length > 8 && (
+        <div className="relative mb-2">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          <input className={`${input} pl-9`} placeholder="Filtrar grupos" value={filter} onChange={(e) => setFilter(e.target.value)} />
+        </div>
+      )}
+      <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto overscroll-contain pr-1">
+        {!filter && item(ALL, 'Todos', total)}
+        {shown.map((g) => item(g.name, g.name || 'Sem grupo', g.count))}
+      </div>
+    </div>
+  );
+}
+
+export default function Browse() {
+  const [params, setParams] = useSearchParams();
+  const kind = (['live', 'movie', 'series'].includes(params.get('tipo') || '') ? params.get('tipo') : 'live') as Kind;
+  const group = params.get('grupo') ?? ALL;
+  const q = params.get('q') || '';
+  const [search, setSearch] = useState(q);
+  const [sheet, setSheet] = useState(false);
+
+  const { data: pls, loading: plLoading } = useApi<{ playlists: Playlist[] }>('playlists');
+  const playlists = pls?.playlists || [];
+  const counts = useMemo(
+    () => ({
+      live: playlists.reduce((s, p) => s + p.liveCount, 0),
+      movie: playlists.reduce((s, p) => s + p.movieCount, 0),
+      series: playlists.reduce((s, p) => s + p.seriesCount, 0),
+    }),
+    [playlists],
+  );
+  const kinds = (Object.keys(KIND_LABEL) as Kind[]).filter((k) => k === 'live' || counts[k] > 0);
+  const { data: gdata } = useApi<{ groups: Group[]; total: number }>(q ? null : `groups?kind=${kind}`);
+
+  const set = (patch: Record<string, string | null>) => {
+    const next = new URLSearchParams(params);
+    for (const [k, v] of Object.entries(patch)) (v === null || v === '' ? next.delete(k) : next.set(k, v));
+    setParams(next, { replace: true });
+  };
+
+  // Busca com atraso para não consultar a cada letra.
+  useEffect(() => setSearch(q), [q]);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (search.trim() !== q) set({ q: search.trim() || null });
+    }, 350);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
+
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const reqId = useRef(0);
+
+  const query = useMemo(() => {
+    const p = new URLSearchParams({ limit: String(PAGE) });
+    if (q) p.set('q', q);
+    else {
+      p.set('kind', kind);
+      if (group !== ALL) p.set('group', group);
+    }
+    return p.toString();
+  }, [kind, group, q]);
+
+  const load = useCallback(
+    async (offset: number) => {
+      const id = ++reqId.current;
+      setLoading(true);
+      try {
+        const r = await api.get<{ channels: Channel[]; hasMore: boolean }>(`channels?${query}&offset=${offset}`);
+        if (id !== reqId.current) return;
+        setChannels((prev) => (offset ? [...prev, ...r.channels] : r.channels));
+        setHasMore(r.hasMore);
+        setError('');
+      } catch (e) {
+        if (id === reqId.current) setError((e as Error).message);
+      } finally {
+        if (id === reqId.current) setLoading(false);
+      }
+    },
+    [query],
+  );
+
+  useEffect(() => {
+    setChannels([]);
+    load(0);
+  }, [load]);
+
+  const sentinel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el || !hasMore || loading) return;
+    const obs = new IntersectionObserver((e) => e[0].isIntersecting && load(channels.length), { rootMargin: '600px' });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [hasMore, loading, channels.length, load]);
+
+  const update = (c: Channel) => setChannels((list) => list.map((x) => (x.id === c.id ? c : x)));
+  const pickGroup = (g: string) => {
+    set({ grupo: g === ALL ? null : g });
+    setSheet(false);
+    window.scrollTo({ top: 0 });
+  };
+
+  if (plLoading && !pls) return <Spinner label="Carregando…" />;
+  if (!playlists.length)
+    return (
+      <Page>
+        <div className="mb-2 lg:hidden">
+          <Logo />
+        </div>
+        <Empty icon={<ListVideo className="h-7 w-7" />} title="Nenhuma lista ainda">
+          <p>Adicione o link ou o arquivo da sua lista M3U para ver os canais aqui.</p>
+          <Link to="/listas" className={`${btnPrimary} mt-5`}>
+            Adicionar lista
+          </Link>
+        </Empty>
+      </Page>
+    );
+
+  const groups = gdata?.groups || [];
+  const groupLabel = group === ALL ? 'Todos os grupos' : group || 'Sem grupo';
+
+  return (
+    <Page wide>
+      <div className="mb-3 flex items-center gap-3">
+        <div className="shrink-0 lg:hidden">
+          <Logo />
+        </div>
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          <input className={`${input} pl-9 pr-10`} placeholder="Buscar canal, filme ou série" value={search} onChange={(e) => setSearch(e.target.value)} />
+          {search && (
+            <button type="button" aria-label="Limpar busca" onClick={() => setSearch('')} className="absolute right-0 top-0 grid h-11 w-11 place-items-center text-slate-500">
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {!q && (
+        <div className="no-scrollbar -mx-3 mb-4 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:px-0">
+          {kinds.map((k) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => set({ tipo: k === 'live' ? null : k, grupo: null })}
+              className={`min-h-[40px] shrink-0 rounded-full px-4 text-sm font-semibold transition ${kind === k ? 'bg-brand text-white' : 'bg-ink-800 text-slate-300 hover:bg-ink-700'}`}
+            >
+              {KIND_LABEL[k]} <span className="ml-1 text-xs opacity-70">{counts[k].toLocaleString('pt-BR')}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="lg:flex lg:items-start lg:gap-6">
+        {!q && (
+          <aside className="sticky top-4 hidden h-[calc(100dvh-8rem)] w-64 shrink-0 flex-col lg:flex">
+            <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-slate-500">Grupos</p>
+            <GroupList groups={groups} total={gdata?.total || 0} current={group} onPick={pickGroup} />
+          </aside>
+        )}
+
+        <section className="min-w-0 flex-1">
+          {!q && (
+            <button type="button" onClick={() => setSheet(true)} className="mb-3 flex min-h-[44px] w-full items-center gap-2 rounded-xl border border-ink-700 bg-ink-900 px-3.5 text-left text-sm lg:hidden">
+              <Layers className="h-4 w-4 shrink-0 text-slate-500" />
+              <span className="min-w-0 flex-1 truncate">{groupLabel}</span>
+              <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" />
+            </button>
+          )}
+          {q && <p className="mb-3 text-sm text-slate-400">Resultados para “{q}”</p>}
+          <ErrorBox message={error} />
+          {channels.length > 0 && <ChannelGrid channels={channels} onChange={update} />}
+          {!loading && !error && !channels.length && (
+            <Empty icon={<Tv className="h-7 w-7" />} title={q ? 'Nada encontrado' : 'Nenhum canal aqui'}>
+              {q ? 'Tente outro nome.' : 'Escolha outro grupo ou tipo.'}
+            </Empty>
+          )}
+          {loading && <Spinner />}
+          <div ref={sentinel} className="h-1" />
+        </section>
+      </div>
+
+      {sheet && (
+        <div className="fixed inset-0 z-40 flex flex-col bg-ink-950 px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] lg:hidden">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-bold">Grupos · {KIND_LABEL[kind]}</h2>
+            <button type="button" aria-label="Fechar" onClick={() => setSheet(false)} className="grid h-11 w-11 place-items-center rounded-full bg-ink-800">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <GroupList groups={groups} total={gdata?.total || 0} current={group} onPick={pickGroup} />
+        </div>
+      )}
+    </Page>
+  );
+}
