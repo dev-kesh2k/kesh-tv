@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ChevronDown, Layers, ListVideo, Search, Tv, X } from 'lucide-react';
 import { api, Channel, Group, Kind, KIND_LABEL, Playlist, Series, useApi } from '../api';
-import { ChannelGrid, SeriesGrid } from '../components/ChannelCard';
+import { ChannelGrid, SeriesGrid, SkeletonGrid } from '../components/ChannelCard';
 import { Logo, Page } from '../components/Layout';
 import { btnPrimary, Empty, ErrorBox, input, Spinner } from '../components/ui';
 import { useTitle } from '../useTitle';
@@ -234,7 +234,7 @@ export default function Browse() {
               {q ? 'Tente outro nome.' : 'Escolha outro grupo ou tipo.'}
             </Empty>
           )}
-          {loading && <Spinner />}
+          {loading && (channels.length || series.length ? <Spinner /> : <SkeletonGrid poster={kind !== 'live' && !q} />)}
           <div ref={sentinel} className="h-1" />
         </section>
       </div>
