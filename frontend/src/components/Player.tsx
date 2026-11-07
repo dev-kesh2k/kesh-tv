@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Loader2, Pause, RotateCcw, VolumeX } from 'lucide-react';
 import { api, apiUrl, Source } from '../api';
+import { keepScreenOn } from '../platform';
 
 type Engine = { destroy: () => void };
 // Ao vivo começa rápido; filmes/episódios de Xtream passam por redirecionamento e demoram mais.
@@ -115,6 +116,23 @@ export function Player({
       window.removeEventListener('pagehide', report);
     };
   }, [sources]);
+
+  // App Android: tela acesa só enquanto toca.
+  useEffect(() => {
+    const el = video.current;
+    if (!el) return;
+    const on = () => keepScreenOn(true);
+    const off = () => keepScreenOn(false);
+    el.addEventListener('playing', on);
+    el.addEventListener('pause', off);
+    el.addEventListener('ended', off);
+    return () => {
+      off();
+      el.removeEventListener('playing', on);
+      el.removeEventListener('pause', off);
+      el.removeEventListener('ended', off);
+    };
+  }, []);
 
   useEffect(() => {
     const el = video.current;
