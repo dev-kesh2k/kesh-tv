@@ -150,6 +150,35 @@ O modo TV liga sozinho em Android TV, Fire TV, Samsung (Tizen), LG (webOS) e no 
 - **Séries**: o nome antes de `S01E02` / `S1 E2` vira a série; episódios são ordenados por temporada e número.
 - URLs repetidas são ignoradas; limites: 300 MB e 15 min por download, até 1 milhão de itens, 20 listas por usuário, upload de arquivo até 95 MB (use o link para listas maiores).
 
+## API
+
+Tudo sob `/api` (ou `/<PUBLIC_PATH>/api`). Exceto as rotas marcadas como públicas, pede `Authorization: Bearer <token>` (obtido no login).
+
+| Método e rota | Para quê |
+| --- | --- |
+| `GET /health` | saúde (público) |
+| `POST /auth/login` | `{ email, password }` → `{ token, user }` (público; limite de tentativas) |
+| `GET /auth/me` · `PUT /auth/profile` | usuário logado · trocar nome |
+| `PUT /auth/password` | `{ current, password }` → token novo; encerra os logins dos outros aparelhos |
+| `GET /stats` | resumo da conta (listas, canais, favoritos, horas assistidas) |
+| `PUT /prefs/hidden-groups` | `{ groups: [...] }` grupos ocultos |
+| `GET/POST /users` · `DELETE /users/:id` | usuários (só admin) |
+| `GET /playlists` · `POST /playlists` | listar · adicionar por link `{ name?, url }` (importa em segundo plano) |
+| `POST /playlists/upload?name=` · `?id=` | adicionar/atualizar por arquivo (corpo = o `.m3u`, em fluxo) |
+| `PUT /playlists/:id` · `POST /playlists/:id/refresh` · `DELETE /playlists/:id` | editar (nome, link, atualização automática) · atualizar agora · excluir |
+| `GET /groups?kind=live\|movie\|series` | grupos com contagem (séries contam séries, não episódios) |
+| `GET /channels?kind=&group=&q=&offset=&limit=` | canais/filmes paginados (busca sem acento) |
+| `GET /series?group=&q=` · `GET /series/episodes?playlist=&name=` | séries agrupadas · temporadas e episódios |
+| `GET /channels/:id/play` | fontes em ordem de tentativa + ponto para continuar |
+| `GET /channels/:id/around` | anterior/próximo (episódio da série ou canal do grupo) |
+| `GET /channels/:id/epg` | programação do canal ao vivo |
+| `POST /channels/:id/watch` · `PUT /channels/:id/progress` | marcar como assistido · salvar posição `{ position, duration }` |
+| `GET /favorites` · `POST/DELETE /favorites/:id` | favoritos |
+| `GET /favorites/export` · `POST /favorites/import` | baixar/importar favoritos em JSON (acha pela URL ou pelo nome) |
+| `GET /history` · `DELETE /history/:id` · `DELETE /history` | recentes · tirar um · limpar |
+| `GET /stream?u&h&e&s` · `GET /logo?…` | proxy de streams e logos (público, **link assinado**) |
+| `POST /convert/start` · `GET /convert/:sid/:file` · `DELETE /convert/:sid` | conversão ffmpeg → HLS (arquivos pelo id de sessão de 128 bits) |
+
 ## Rodando localmente (desenvolvimento)
 
 Requisitos: Node 22, PostgreSQL e ffmpeg (para a conversão).
