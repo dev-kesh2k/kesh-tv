@@ -11,13 +11,15 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-/** Mesma identidade do site: azul-tinta, texto de papel, âmbar do controle, vermelho só no "ao vivo". */
+/** Identidade do site (papel, âmbar do controle, vermelho do "ao vivo") sobre grafite neutro:
+ *  azul-marinho vira azul berrante no modo de imagem das TVs, cinza neutro não. */
 object Kesh {
-  val Ink = Color(0xFF0F1724)
-  val Panel = Color(0xFF172133)
-  val Line = Color(0xFF26324A)
+  val Ink = Color(0xFF0C0D10)
+  val Panel = Color(0xFF17191E)
+  val Raise = Color(0xFF262A32)
+  val Line = Color(0xFF2A2D35)
   val Paper = Color(0xFFECE7DC)
-  val Fog = Color(0xFF8C96A8)
+  val Fog = Color(0xFF9EA3AD)
   val Signal = Color(0xFFF2B705)
   val Tally = Color(0xFFE0412F)
 }
