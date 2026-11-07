@@ -1,31 +1,44 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ChevronDown, Layers, ListVideo, Search, Tv, X } from 'lucide-react';
+import { ChevronDown, EyeOff, Layers, ListVideo, Search, Tv, X } from 'lucide-react';
 import { api, Channel, Group, Kind, KIND_LABEL, Playlist, Series, useApi } from '../api';
 import { ChannelGrid, SeriesGrid, SkeletonGrid } from '../components/ChannelCard';
 import { Logo, Page } from '../components/Layout';
 import { btnPrimary, Empty, ErrorBox, input, Spinner } from '../components/ui';
 import { useTitle } from '../useTitle';
+import { useAuth } from '../auth';
 
 const PAGE = 60;
 const ALL = '__all';
 
-function GroupList({ groups, total, current, onPick }: { groups: Group[]; total: number; current: string; onPick: (g: string) => void }) {
+function GroupList({ groups, total, current, onPick, onHide }: { groups: Group[]; total: number; current: string; onPick: (g: string) => void; onHide: (g: string) => void }) {
   const [filter, setFilter] = useState('');
   const shown = useMemo(() => {
     const f = filter.trim().toLowerCase();
     return f ? groups.filter((g) => (g.name || 'Sem grupo').toLowerCase().includes(f)) : groups;
   }, [groups, filter]);
   const item = (name: string, label: string, count: number) => (
-    <button
-      key={name}
-      type="button"
-      onClick={() => onPick(name)}
-      className={`flex min-h-[44px] w-full items-center justify-between gap-2 rounded-xl px-3 text-left text-sm transition ${current === name ? 'bg-brand/15 font-semibold text-brand-light' : 'text-slate-300 hover:bg-ink-800'}`}
-    >
-      <span className="min-w-0 truncate">{label}</span>
-      <span className="shrink-0 text-xs text-slate-500">{count.toLocaleString('pt-BR')}</span>
-    </button>
+    <div key={name} className={`group/item flex items-center rounded-xl transition ${current === name ? 'bg-brand/15' : 'hover:bg-ink-800'}`}>
+      <button
+        type="button"
+        onClick={() => onPick(name)}
+        className={`flex min-h-[44px] min-w-0 flex-1 items-center justify-between gap-2 px-3 text-left text-sm ${current === name ? 'font-semibold text-brand-light' : 'text-slate-300'}`}
+      >
+        <span className="min-w-0 truncate">{label}</span>
+        <span className="shrink-0 text-xs text-slate-500">{count.toLocaleString('pt-BR')}</span>
+      </button>
+      {name !== ALL && (
+        <button
+          type="button"
+          onClick={() => onHide(name)}
+          aria-label={`Ocultar o grupo ${label}`}
+          title="Ocultar este grupo"
+          className="grid h-10 w-9 shrink-0 place-items-center rounded-lg text-slate-600 hover:text-slate-200 lg:opacity-0 lg:group-hover/item:opacity-100"
+        >
+          <EyeOff className="h-4 w-4" />
+        </button>
+      )}
+    </div>
   );
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -50,6 +63,13 @@ export default function Browse() {
   const q = params.get('q') || '';
   const [search, setSearch] = useState(q);
   const [sheet, setSheet] = useState(false);
+  const { user, setUser } = useAuth();
+  const hideGroup = async (g: string) => {
+    if (!user || !confirm(`Ocultar o grupo "${g || 'Sem grupo'}"? Ele some dos canais e da busca; dá para mostrar de novo em Conta.`)) return;
+    const r = await api.put<{ hiddenGroups: string[] }>('prefs/hidden-groups', { groups: [...(user.hiddenGroups || []), g] });
+    setUser({ ...user, hiddenGroups: r.hiddenGroups });
+    if (group === g) set({ grupo: null });
+  };
   useTitle(q ? `Busca: ${q}` : group !== ALL ? `${group || 'Sem grupo'} · ${KIND_LABEL[kind]}` : KIND_LABEL[kind]);
 
   const { data: pls, loading: plLoading } = useApi<{ playlists: Playlist[] }>('playlists');
@@ -63,7 +83,7 @@ export default function Browse() {
     [playlists],
   );
   const kinds = (Object.keys(KIND_LABEL) as Kind[]).filter((k) => k === 'live' || counts[k] > 0);
-  const { data: gdata } = useApi<{ groups: Group[]; total: number }>(q ? null : `groups?kind=${kind}`);
+  const { data: gdata, reload: reloadGroups } = useApi<{ groups: Group[]; total: number }>(q ? null : `groups?kind=${kind}`);
 
   const set = (patch: Record<string, string | null>) => {
     const next = new URLSearchParams(params);
@@ -136,6 +156,19 @@ export default function Browse() {
     load(0);
   }, [load]);
 
+  // Grupo ocultado/mostrado: recarrega grupos e canais.
+  const hiddenKey = (user?.hiddenGroups || []).join('\u0001');
+  const firstHidden = useRef(true);
+  useEffect(() => {
+    if (firstHidden.current) {
+      firstHidden.current = false;
+      return;
+    }
+    reloadGroups();
+    load(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hiddenKey]);
+
   const sentinel = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = sentinel.current;
@@ -207,7 +240,7 @@ export default function Browse() {
         {!q && (
           <aside className="sticky top-4 hidden h-[calc(100dvh-8rem)] w-64 shrink-0 flex-col lg:flex">
             <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-slate-500">Grupos</p>
-            <GroupList groups={groups} total={gdata?.total || 0} current={group} onPick={pickGroup} />
+            <GroupList groups={groups} total={gdata?.total || 0} current={group} onPick={pickGroup} onHide={hideGroup} />
           </aside>
         )}
 
@@ -247,7 +280,7 @@ export default function Browse() {
               <X className="h-5 w-5" />
             </button>
           </div>
-          <GroupList groups={groups} total={gdata?.total || 0} current={group} onPick={pickGroup} />
+          <GroupList groups={groups} total={gdata?.total || 0} current={group} onPick={pickGroup} onHide={hideGroup} />
         </div>
       )}
     </Page>
