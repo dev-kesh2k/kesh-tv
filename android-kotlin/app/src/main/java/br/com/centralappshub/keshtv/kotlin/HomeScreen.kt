@@ -1,6 +1,17 @@
 package br.com.centralappshub.keshtv.kotlin
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.Icon
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -86,47 +97,61 @@ fun HomeScreen(api: Api, onOpen: (Channel) -> Unit, onSeries: (Series) -> Unit, 
     load(0)
   }
 
+  var searching by remember { mutableStateOf(false) }
+  var focusedChannel by remember { mutableStateOf<Channel?>(null) }
+  val searchFocus = remember { FocusRequester() }
+  // Voltar com a busca aberta fecha a busca (em vez de sair da tela).
+  BackHandler(enabled = searching) { searching = false; query = "" }
+  LaunchedEffect(searching) { if (searching) runCatching { searchFocus.requestFocus() } }
+  val tv = isTv()
+  val side = sideMargin()
+
   Column(Modifier.fillMaxSize().background(Kesh.Ink)) {
-    OutlinedTextField(
-      query, { query = it }, singleLine = true, placeholder = { Text("Buscar canal, filme ou série") },
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).focusRing(),
-    )
-    if (query.isEmpty()) {
-      // Abas sublinhadas Ao vivo / Filmes / Séries.
-      Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-        KINDS.forEach { (k, label) ->
-          Column(Modifier.focusRing().clickable { kind = k }.padding(horizontal = 4.dp, vertical = 6.dp)) {
-            Text(label, style = MaterialTheme.typography.titleLarge, color = if (kind == k) Kesh.Paper else Kesh.Fog)
-            Box(Modifier.padding(top = 4.dp).width(40.dp).height(3.dp).background(if (kind == k) Kesh.Signal else Color.Transparent))
-          }
-        }
+    if (searching) {
+      OutlinedTextField(
+        query, { query = it }, singleLine = true, placeholder = { Text("Buscar canal, filme ou série") },
+        leadingIcon = { Icon(Icons.Outlined.Search, null) },
+        modifier = Modifier.fillMaxWidth().padding(horizontal = side, vertical = 8.dp).focusRequester(searchFocus),
+      )
+    } else {
+      // Ao vivo / Filmes / Séries e o botão de busca na mesma linha.
+      Row(Modifier.fillMaxWidth().padding(horizontal = side, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        KINDS.forEach { (k, label) -> Pill(label, kind == k, big = true) { kind = k } }
+        Spacer(Modifier.weight(1f))
+        Pill("Buscar", false, icon = Icons.Outlined.Search) { searching = true }
       }
-      HorizontalDivider(color = Kesh.Line)
       // Grupos em fileira de botões.
-      LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        item { Chip("Todos", group == ALL) { group = ALL } }
-        items(groups) { g -> Chip("${groupLabel(g.name, kind)}  ${g.count}", group == g.name) { group = g.name } }
+      LazyRow(contentPadding = PaddingValues(horizontal = side, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        item { Pill("Todos", group == ALL) { group = ALL } }
+        items(groups) { g -> Pill("${groupLabel(g.name, kind)}  ${g.count}", group == g.name) { group = g.name } }
       }
     }
-    if (error.isNotEmpty()) Text(error, color = Kesh.Tally, modifier = Modifier.padding(16.dp).clickable { reloadKey++ })
+    if (error.isNotEmpty()) Text(error, color = Kesh.Tally, modifier = Modifier.padding(horizontal = side, vertical = 8.dp).clickable { reloadKey++ })
 
     val showSeries = kind == "series" && query.isEmpty()
     Box(Modifier.weight(1f)) {
+      val gridCells = GridCells.Adaptive(if (tv) 150.dp else 120.dp)
+      val listPad = PaddingValues(start = side, end = side, top = 4.dp, bottom = 24.dp)
       when {
-        showSeries -> LazyVerticalGrid(GridCells.Adaptive(130.dp), contentPadding = PaddingValues(12.dp)) {
+        showSeries -> LazyVerticalGrid(gridCells, contentPadding = listPad) {
           itemsIndexed(series) { i, s ->
             if (i == series.size - 6 && hasMore && !loading) LaunchedEffect(series.size) { load(series.size) }
-            Poster(s.logo, s.name, if (s.seasons > 1) "${s.seasons} temporadas, ${s.episodes} episódios" else "${s.episodes} episódios") { onSeries(s) }
+            Poster(s.logo, s.name, if (s.seasons > 1) "${s.seasons} temporadas" else "${s.episodes} episódios") { onSeries(s) }
           }
         }
-        kind == "live" && query.isEmpty() -> LazyColumn(contentPadding = PaddingValues(horizontal = 8.dp)) {
-          itemsIndexed(channels) { i, c ->
-            if (i == channels.size - 10 && hasMore && !loading) LaunchedEffect(channels.size) { load(channels.size) }
-            GuideRow(c) { onOpen(c) }
-            HorizontalDivider(color = Kesh.Line)
+        kind == "live" && query.isEmpty() -> Row(Modifier.fillMaxSize().padding(start = side, end = side, bottom = 20.dp)) {
+          LazyColumn(Modifier.weight(if (tv) 0.6f else 1f), contentPadding = PaddingValues(top = 4.dp, bottom = 24.dp)) {
+            itemsIndexed(channels, key = { _, c -> c.id }) { i, c ->
+              if (i == channels.size - 10 && hasMore && !loading) LaunchedEffect(channels.size) { load(channels.size) }
+              GuideRow(c, onFocus = { focusedChannel = it }) { onOpen(c) }
+            }
+          }
+          if (tv && channels.isNotEmpty()) {
+            Spacer(Modifier.width(24.dp))
+            ChannelDetails(focusedChannel ?: channels.first(), Modifier.weight(0.4f).fillMaxHeight().padding(top = 7.dp))
           }
         }
-        else -> LazyVerticalGrid(GridCells.Adaptive(130.dp), contentPadding = PaddingValues(12.dp)) {
+        else -> LazyVerticalGrid(gridCells, contentPadding = listPad) {
           itemsIndexed(channels) { i, c ->
             if (i == channels.size - 6 && hasMore && !loading) LaunchedEffect(channels.size) { load(channels.size) }
             Poster(c.logo, c.name, groupLabel(c.group, c.kind), c.progress) { onOpen(c) }
@@ -135,14 +160,23 @@ fun HomeScreen(api: Api, onOpen: (Channel) -> Unit, onSeries: (Series) -> Unit, 
       }
       if (loading && channels.isEmpty() && series.isEmpty()) CircularProgressIndicator(Modifier.align(Alignment.Center), color = Kesh.Signal)
       if (!loading && error.isEmpty() && channels.isEmpty() && series.isEmpty())
-        Text(if (query.isEmpty()) "Nada neste grupo. Adicione listas pelo site, em Listas." else "Nada encontrado para \"$query\".", style = MaterialTheme.typography.bodySmall, modifier = Modifier.align(Alignment.Center).padding(24.dp))
+        Text(if (query.isEmpty()) "Nada neste grupo. Adicione listas pelo site, em Listas." else "Nada encontrado para \"$query\".", style = MaterialTheme.typography.bodyMedium, color = Kesh.Fog, modifier = Modifier.align(Alignment.Center).padding(24.dp))
     }
   }
 }
 
+/** Botão em pílula (tipos, grupos, busca): selecionado em âmbar; em foco, fundo claro. */
 @Composable
-private fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
-  Box(
-    Modifier.focusRing().background(if (selected) Kesh.Signal else Kesh.Panel, RoundedCornerShape(6.dp)).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 10.dp),
-  ) { Text(label, color = if (selected) Kesh.Ink else Kesh.Paper, fontSize = 15.sp) }
+private fun Pill(label: String, selected: Boolean, big: Boolean = false, icon: ImageVector? = null, onClick: () -> Unit) {
+  var focused by remember { mutableStateOf(false) }
+  val bg = when { focused -> Kesh.Paper; selected -> Kesh.Signal; else -> Kesh.Panel }
+  val fg = if (focused || selected) Kesh.Ink else Kesh.Paper
+  Row(
+    Modifier.onFocusChanged { focused = it.isFocused }.tvClick(onClick)
+      .background(bg, RoundedCornerShape(50)).padding(horizontal = if (big) 22.dp else 16.dp, vertical = if (big) 10.dp else 8.dp),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    if (icon != null) Icon(icon, null, tint = fg, modifier = Modifier.padding(end = 8.dp).size(20.dp))
+    Text(label, color = fg, fontSize = if (big) 18.sp else 15.sp, fontWeight = if (big || selected) FontWeight.Bold else FontWeight.Medium)
+  }
 }

@@ -3,6 +3,7 @@ package br.com.centralappshub.keshtv.kotlin
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -23,8 +24,8 @@ fun AccountScreen(api: Api, store: Store, onLogout: () -> Unit) {
   LaunchedEffect(Unit) { user = runCatching { api.me() }.getOrNull() }
 
   Column(Modifier.fillMaxSize()) {
-    Text("Conta", style = MaterialTheme.typography.headlineSmall, fontFamily = Condensed, modifier = Modifier.padding(20.dp, 16.dp, 20.dp, 0.dp))
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Text("Conta", style = MaterialTheme.typography.headlineSmall, fontFamily = Condensed, modifier = Modifier.padding(sideMargin(), 12.dp, sideMargin(), 0.dp))
+    Column(Modifier.padding(horizontal = sideMargin(), vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
       Info("Nome", user?.name ?: "…")
       Info("E-mail", user?.email ?: "…")
       Info("Servidor", store.server)
