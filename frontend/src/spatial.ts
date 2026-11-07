@@ -64,15 +64,24 @@ export function installSpatialNav() {
     // Na tela do canal, sem nada em destaque, as setas são do player (canal ↑↓, tempo ←→).
     if (nothingFocused && location.pathname.includes('/assistir/')) return;
 
-    const all = [...document.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(visible);
-    if (!all.length) return;
+    // Grades com milhares de canais: primeiro filtra pela posição (barato) e só confere o estilo dos itens
+    // a até 2 telas de distância — a busca completa travava TV Boxes fracas.
+    const reach = window.innerHeight * 2;
+    const near: { el: HTMLElement; rect: DOMRect }[] = [];
+    for (const el of document.querySelectorAll<HTMLElement>(FOCUSABLE)) {
+      if (el === active) continue;
+      const rect = el.getBoundingClientRect();
+      if (rect.width < 2 || rect.height < 2 || rect.bottom < -reach || rect.top > window.innerHeight + reach) continue;
+      near.push({ el, rect });
+    }
+    const candidates = near.filter((c) => visible(c.el));
+    if (!candidates.length) return;
     e.preventDefault();
     let target: HTMLElement | null;
     if (nothingFocused) {
       // Primeiro toque nas setas: começa pelo conteúdo da página (não pelo menu).
-      target = all.find((el) => el.closest('main')) || all[0];
+      target = candidates.find((c) => c.el.closest('main'))?.el || candidates[0].el;
     } else {
-      const candidates = all.filter((el) => el !== active).map((el) => ({ el, rect: el.getBoundingClientRect() }));
       target = nextInDirection(active!.getBoundingClientRect(), dir, candidates);
     }
     if (!target) return;
