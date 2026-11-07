@@ -7,6 +7,15 @@ body,
 #root {
   min-height: 100dvh;
 }
+/* iPhone: não aumenta o texto ao girar a tela; toque longo em cartões não abre a prévia do Safari. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+a[href*='/assistir/'],
+a[href*='/serie/'] {
+  -webkit-touch-callout: none;
+}
 body {
   @apply bg-ink-950 text-slate-100 antialiased;
   -webkit-tap-highlight-color: transparent;
