@@ -5,6 +5,7 @@ import { signToken, publicUser, requireAuth, tooManyAttempts, recordFailure, cle
 import { startSync } from './sync.js';
 import { cleanSeconds, resumePoint, watchedFraction } from './progress.js';
 import { buildExport, parseImport } from './favorites-io.js';
+import { channelGuide, nowNext } from './epg.js';
 import { serveConversion, startConversion, stopUserConversion } from './convert.js';
 import { sign, verify } from './net.js';
 import { logoLink, probeType, proxyLogo, proxyStream, streamLink, typeFromUrl, xtreamHls } from './stream.js';
@@ -193,13 +194,28 @@ function hostName(url) {
 }
 
 // ---------- Canais ----------
-const channelSelect = { id: true, name: true, groupTitle: true, logo: true, kind: true, playlistId: true, position: true };
+const channelSelect = { id: true, name: true, groupTitle: true, logo: true, kind: true, playlistId: true, position: true, tvgId: true };
 
 async function decorate(userId, rows) {
-  const favs = rows.length
-    ? new Set((await prisma.favorite.findMany({ where: { userId, channelId: { in: rows.map((r) => r.id) } }, select: { channelId: true } })).map((f) => f.channelId))
-    : new Set();
-  return rows.map((r) => ({ id: r.id, name: r.name, group: r.groupTitle, kind: r.kind, playlistId: r.playlistId, logo: logoLink(r.logo), favorite: favs.has(r.id) }));
+  const [favRows, guide] = await Promise.all([
+    rows.length ? prisma.favorite.findMany({ where: { userId, channelId: { in: rows.map((r) => r.id) } }, select: { channelId: true } }) : [],
+    nowNext(rows),
+  ]);
+  const favs = new Set(favRows.map((f) => f.channelId));
+  return rows.map((r) => {
+    const g = r.tvgId ? guide.get(`${r.playlistId}|${r.tvgId.toLowerCase()}`) : null;
+    return {
+      id: r.id,
+      name: r.name,
+      group: r.groupTitle,
+      kind: r.kind,
+      playlistId: r.playlistId,
+      logo: logoLink(r.logo),
+      favorite: favs.has(r.id),
+      ...(g?.now ? { now: g.now } : {}),
+      ...(g?.next ? { next: g.next } : {}),
+    };
+  });
 }
 
 async function playlistIds(req) {
@@ -355,6 +371,12 @@ api.get('/series/episodes', wrap(async (req, res) => {
     logo: list.find((c) => c.logo)?.logo || '',
     episodes: list.map((c, i) => ({ ...c, season: rows[i].season, episode: rows[i].episode })),
   });
+}));
+
+/** Programação do canal ao vivo (atual + próximos). */
+api.get('/channels/:id/epg', wrap(async (req, res) => {
+  const ch = await ownChannel(req);
+  res.json({ programmes: await channelGuide(ch) });
 }));
 
 api.post('/channels/:id/watch', wrap(async (req, res) => {
