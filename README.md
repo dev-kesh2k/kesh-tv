@@ -42,7 +42,19 @@ navegador ──► frontend (React + Vite + Tailwind)
                  └─ /api/convert  ffmpeg → HLS para formatos que o navegador não toca
 ```
 
-## Rodando localmente
+## Instalação rápida (Docker)
+
+Banco, API (com ffmpeg) e frontend com um comando:
+
+```bash
+git clone https://github.com/dev-kesh2k/kesh-tv.git && cd kesh-tv
+cp deploy/docker/.env.example deploy/docker/.env   # troque as senhas
+docker compose -f deploy/docker/compose.yml up -d --build
+```
+
+Abra **http://localhost:8080**, entre com `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` e adicione sua lista em **Listas**.
+
+## Rodando localmente (desenvolvimento)
 
 Requisitos: Node 22, PostgreSQL e ffmpeg (para a conversão).
 
