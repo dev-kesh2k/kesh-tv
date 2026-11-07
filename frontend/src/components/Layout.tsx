@@ -25,7 +25,7 @@ export function Logo() {
 export function Layout() {
   return (
     <div className="min-h-[100dvh] lg:flex">
-      <aside className="sticky top-0 hidden h-[100dvh] w-60 shrink-0 flex-col border-r border-ink-800 bg-ink-900/60 px-4 py-6 lg:flex">
+      <aside className="tv-sidebar sticky top-0 hidden h-[100dvh] w-60 shrink-0 flex-col border-r border-ink-800 bg-ink-900/60 px-4 py-6 lg:flex">
         <div className="mb-8 px-2">
           <Logo />
         </div>
