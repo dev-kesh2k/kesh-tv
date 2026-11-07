@@ -179,6 +179,16 @@ Tudo sob `/api` (ou `/<PUBLIC_PATH>/api`). Exceto as rotas marcadas como públic
 | `GET /stream?u&h&e&s` · `GET /logo?…` | proxy de streams e logos (público, **link assinado**) |
 | `POST /convert/start` · `GET /convert/:sid/:file` · `DELETE /convert/:sid` | conversão ffmpeg → HLS (arquivos pelo id de sessão de 128 bits) |
 
+## Segurança
+
+- **Rede interna protegida:** o proxy, a importação, o guia e o ffmpeg só acessam endereços públicos — loopback, redes do Docker, link-local/metadados de nuvem, CGNAT e IPv4 escondido em IPv6 (`::ffff:127.0.0.1`, NAT64…) são recusados. A conexão usa o mesmo IP que foi checado (sem *DNS rebinding*) e cada redirecionamento é conferido.
+- **Links assinados:** `/api/stream` e `/api/logo` só aceitam links gerados pelo backend (HMAC-SHA256 com `JWT_SECRET`), com validade de 12 h para streams.
+- **Conteúdo de terceiros isolado:** respostas do proxy saem com `Content-Security-Policy: sandbox` e `nosniff`; HTML/JS/XML vindos da fonte viram binário (um SVG com `<script>` não roda no domínio do app).
+- **Login:** senhas com bcrypt; o token (30 dias) leva a versão da senha — trocar a senha encerra os outros aparelhos. Limite de 10 tentativas por IP+e-mail e 30 por e-mail em 15 min; atrás do Cloudflare o IP vem do `CF-Connecting-IP` (`TRUST_CLOUDFLARE=1`).
+- **Credenciais das listas** (usuário/senha do provedor no link) ficam só no banco, nunca no repositório. Nunca commite `.env` nem a chave do APK.
+
+Achou uma falha? Veja [SECURITY.md](SECURITY.md).
+
 ## Rodando localmente (desenvolvimento)
 
 Requisitos: Node 22, PostgreSQL e ffmpeg (para a conversão).
