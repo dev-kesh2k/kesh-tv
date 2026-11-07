@@ -99,6 +99,10 @@ export function Recent() {
   useTitle('Recentes');
   const list = data?.channels || [];
   const update = (c: Channel) => setData({ channels: list.map((x) => (x.id === c.id ? c : x)) });
+  const remove = async (c: Channel) => {
+    await api.del(`history/${c.id}`);
+    setData({ channels: list.filter((x) => x.id !== c.id) });
+  };
   const clear = async () => {
     if (!confirm('Limpar o histórico de canais assistidos?')) return;
     await api.del('history');
@@ -121,7 +125,7 @@ export function Recent() {
       {loading && !data ? (
         <SkeletonGrid count={6} poster />
       ) : list.length ? (
-        <ChannelGrid channels={list} onChange={update} />
+        <ChannelGrid channels={list} onChange={update} onRemove={remove} />
       ) : (
         <Empty icon={<History className="h-7 w-7" />} title="Nada assistido ainda">
           Os canais que você abrir aparecem aqui.
