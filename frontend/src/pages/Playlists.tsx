@@ -115,11 +115,8 @@ function PlaylistCard({ pl, onChanged }: { pl: Playlist; onChanged: () => void }
   return (
     <div className={`${card} p-4 sm:p-5`}>
       <div className="flex items-start gap-3">
-        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand/15 text-brand">
-          <ListVideo className="h-5 w-5" />
-        </div>
         <div className="min-w-0 flex-1">
-          <h3 className="truncate font-semibold">{pl.name}</h3>
+          <h3 className="font-display truncate text-xl text-slate-100">{pl.name}</h3>
           <p className="truncate text-xs text-slate-500">{pl.url ? pl.url.replace(/(username|password)=[^&]+/gi, '$1=•••') : 'Arquivo enviado'}</p>
         </div>
       </div>
@@ -146,18 +143,9 @@ function PlaylistCard({ pl, onChanged }: { pl: Playlist; onChanged: () => void }
         </p>
       )}
       {pl.channelCount > 0 && (
-        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-          {[
-            ['Ao vivo', pl.liveCount],
-            ['Filmes', pl.movieCount],
-            ['Séries', pl.seriesCount],
-          ].map(([l, n]) => (
-            <div key={l} className="rounded-xl bg-ink-850 px-2 py-2">
-              <p className="text-base font-bold">{fmt(n as number)}</p>
-              <p className="text-[11px] text-slate-500">{l}</p>
-            </div>
-          ))}
-        </div>
+        <p className="mt-2 text-sm text-slate-300">
+          {fmt(pl.liveCount)} ao vivo, {fmt(pl.movieCount)} filmes, {fmt(pl.seriesCount)} séries
+        </p>
       )}
 
       {editing ? (
