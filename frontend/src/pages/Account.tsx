@@ -1,9 +1,9 @@
 import { FormEvent, useState } from 'react';
-import { Download, Eye, LogOut, Smartphone, Trash2, UserPlus } from 'lucide-react';
+import { Download, Eye, LogOut, Trash2, UserPlus } from 'lucide-react';
 import { api, setToken, User, useApi } from '../api';
 import { useAuth } from '../auth';
 import { Page } from '../components/Layout';
-import { btnDanger, btnGhost, btnPrimary, card, ErrorBox, input, PageTitle } from '../components/ui';
+import { btnDanger, btnGhost, btnPrimary, ErrorBox, input, PageTitle } from '../components/ui';
 import { useTitle } from '../useTitle';
 import { platform, setTvMode, tvModeSetting } from '../platform';
 
@@ -52,7 +52,7 @@ function Users({ me }: { me: User }) {
     reload();
   };
   return (
-    <section className={`${card} p-4 sm:p-5`}>
+    <section className="border-t border-ink-800 pt-6">
       <h2 className="mb-3 font-semibold">Usuários</h2>
       <ul className="mb-4 divide-y divide-ink-700/60">
         {data?.users.map((u) => (
@@ -109,9 +109,9 @@ function AndroidAppSection() {
     }
   })();
   return (
-    <section className={`${card} p-4 sm:p-5`}>
-      <h2 className="flex items-center gap-2 font-semibold">
-        <Smartphone className="h-4 w-4" /> App Android
+    <section className="border-t border-ink-800 pt-6">
+      <h2 className="font-display flex items-center gap-2 text-xl text-slate-100">
+        App Android
       </h2>
       {platform.app ? (
         <p className="mt-1 text-sm text-slate-400">
@@ -146,8 +146,8 @@ function TvModeSection() {
     </button>
   );
   return (
-    <section className={`${card} p-4 sm:p-5`}>
-      <h2 className="font-semibold">Modo TV</h2>
+    <section className="border-t border-ink-800 pt-6">
+      <h2 className="font-display text-xl text-slate-100">Modo TV</h2>
       <p className="mt-1 text-sm text-slate-400">
         Letras e botões maiores, navegação pelo controle remoto e margem para as bordas da TV. Neste aparelho: <b className="text-slate-200">{platform.tv ? 'ligado' : 'desligado'}</b>.
       </p>
@@ -173,16 +173,16 @@ function Stats() {
     ['Horas assistidas*', n(data.hoursWatched)],
   ];
   return (
-    <section className={`${card} p-4 sm:p-5`}>
-      <h2 className="mb-3 font-semibold">Resumo</h2>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+    <section className="border-t border-ink-800 pt-6">
+      <h2 className="font-display mb-3 text-xl text-slate-100">Resumo</h2>
+      <dl className="grid max-w-md grid-cols-[1fr_auto] text-sm">
         {items.map(([label, value]) => (
-          <div key={label} className="rounded-xl bg-ink-850 px-3 py-2.5">
-            <p className="text-lg font-bold tabular-nums">{value}</p>
-            <p className="text-xs text-slate-500">{label}</p>
+          <div key={label} className="contents">
+            <dt className="border-b border-ink-800 py-2 pr-6 text-slate-400">{label}</dt>
+            <dd className="border-b border-ink-800 py-2 text-right font-semibold text-slate-100">{value}</dd>
           </div>
         ))}
-      </div>
+      </dl>
       <p className="mt-2 text-[11px] text-slate-500">* Filmes e episódios, pela posição salva de cada um.</p>
     </section>
   );
@@ -218,15 +218,15 @@ export default function Account() {
   return (
     <Page>
       <PageTitle title="Conta" subtitle={user.email} />
-      <div className="space-y-4">
+      <div className="space-y-8">
         <Stats />
 
         <TvModeSection />
 
         <AndroidAppSection />
 
-        <form onSubmit={saveName} className={`${card} space-y-3 p-4 sm:p-5`}>
-          <h2 className="font-semibold">Perfil</h2>
+        <form onSubmit={saveName} className="space-y-3 border-t border-ink-800 pt-6">
+          <h2 className="font-display text-xl text-slate-100">Perfil</h2>
           <input className={input} value={name} required maxLength={80} onChange={(e) => setName(e.target.value)} />
           <ErrorBox message={profile.error} />
           <Ok text={profile.ok} />
@@ -235,8 +235,8 @@ export default function Account() {
           </button>
         </form>
 
-        <form onSubmit={savePass} className={`${card} space-y-3 p-4 sm:p-5`}>
-          <h2 className="font-semibold">Trocar senha</h2>
+        <form onSubmit={savePass} className="space-y-3 border-t border-ink-800 pt-6">
+          <h2 className="font-display text-xl text-slate-100">Trocar senha</h2>
           <input className={input} type="password" autoComplete="current-password" placeholder="Senha atual" required value={current} onChange={(e) => setCurrent(e.target.value)} />
           <input className={input} type="password" autoComplete="new-password" placeholder="Nova senha (mín. 8)" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
           <ErrorBox message={pass.error} />
@@ -246,8 +246,8 @@ export default function Account() {
           </button>
         </form>
 
-        <section className={`${card} p-4 sm:p-5`}>
-          <h2 className="font-semibold">Grupos ocultos</h2>
+        <section className="border-t border-ink-800 pt-6">
+          <h2 className="font-display text-xl text-slate-100">Grupos ocultos</h2>
           {user.hiddenGroups?.length ? (
             <ul className="mt-3 divide-y divide-ink-700/60">
               {user.hiddenGroups.map((g) => (
