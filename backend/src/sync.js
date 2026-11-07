@@ -148,7 +148,11 @@ export async function startSync(playlistId, source) {
 
 /** Atualização automática diária das listas por link. */
 export function startAutoRefresh() {
+  let running = false;
   const tick = async () => {
+    // Uma rodada por vez: listas grandes ou guias lentos podem passar do intervalo de 30 min.
+    if (running) return;
+    running = true;
     try {
       const due = await prisma.playlist.findMany({
         where: {
@@ -170,6 +174,8 @@ export function startAutoRefresh() {
       for (const p of epgDue) await syncEpg(p.id);
     } catch (err) {
       console.warn('auto-refresh', err.message);
+    } finally {
+      running = false;
     }
   };
   setTimeout(tick, 60_000 + Math.random() * 60_000);
