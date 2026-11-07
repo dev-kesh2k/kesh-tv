@@ -501,6 +501,11 @@ api.get('/history', wrap(async (req, res) => {
   });
 }));
 
+api.delete('/history/:id', wrap(async (req, res) => {
+  await prisma.history.deleteMany({ where: { userId: req.user.id, channelId: uuid(req.params.id, 'Canal') } });
+  res.json({ ok: true });
+}));
+
 api.delete('/history', wrap(async (req, res) => {
   await prisma.history.deleteMany({ where: { userId: req.user.id } });
   res.json({ ok: true });
