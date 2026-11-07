@@ -8,6 +8,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { HttpError } from './db.js';
 import { assertPublic, DEFAULT_UA, safeFetch } from './net.js';
+import { SANDBOX_HEADERS } from './stream.js';
 
 const ROOT = path.join(os.tmpdir(), 'kesh-convert');
 const SEG = 6;
@@ -205,6 +206,7 @@ export async function serveConversion(req, res) {
   const s = sessions.get(String(req.params.sid));
   if (!s) throw new HttpError(404, 'Conversão encerrada');
   s.last = Date.now();
+  res.set(SANDBOX_HEADERS);
   const file = String(req.params.file);
   if (file === 'index.m3u8') {
     const p = path.join(s.dir, file);
