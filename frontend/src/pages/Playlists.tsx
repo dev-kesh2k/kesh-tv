@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { AlertCircle, CheckCircle2, FileUp, Link2, ListVideo, Loader2, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-react';
+import { AlertCircle, CalendarClock, CheckCircle2, FileUp, Link2, ListVideo, Loader2, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-react';
 import { api, Playlist, useApi } from '../api';
 import { Page } from '../components/Layout';
 import { btnDanger, btnGhost, btnPrimary, card, Empty, ErrorBox, input, PageTitle, Spinner, Switch } from '../components/ui';
@@ -138,6 +138,12 @@ function PlaylistCard({ pl, onChanged }: { pl: Playlist; onChanged: () => void }
           </span>
         )}
       </div>
+      {pl.epgUrl && pl.status === 'ok' && (
+        <p className={`mt-2 flex items-start gap-1.5 text-sm ${pl.epgError ? 'text-amber-300' : 'text-slate-400'}`}>
+          <CalendarClock className="mt-0.5 h-4 w-4 shrink-0" />
+          {pl.epgError || (pl.epgSyncedAt ? `Guia de programação: ${fmt(pl.epgCount)} programas (atualizado ${when(pl.epgSyncedAt)})` : 'Baixando o guia de programação…')}
+        </p>
+      )}
       {pl.channelCount > 0 && (
         <div className="mt-3 grid grid-cols-3 gap-2 text-center">
           {[
