@@ -11,7 +11,7 @@ export interface Platform {
 declare global {
   interface Window {
     /** Ponte do app Android (addJavascriptInterface). */
-    KeshNative?: { isTv?: () => boolean; version?: () => string };
+    KeshNative?: { isTv?: () => boolean; version?: () => string; keepScreenOn?: (on: boolean) => void };
   }
 }
 
@@ -57,4 +57,13 @@ export function applyPlatformClasses() {
   c.toggle('is-app', platform.app);
   c.toggle('is-ios', platform.ios);
   c.toggle('is-android', platform.android);
+}
+
+/** App Android: mantém a tela acesa enquanto o vídeo toca (no navegador não faz nada). */
+export function keepScreenOn(on: boolean) {
+  try {
+    window.KeshNative?.keepScreenOn?.(on);
+  } catch {
+    /* app antigo sem a ponte */
+  }
 }
