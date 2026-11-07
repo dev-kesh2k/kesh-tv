@@ -53,6 +53,8 @@ export async function syncEpg(playlistId) {
       const from = Date.now() - WINDOW_BEFORE;
       const to = Date.now() + WINDOW_AFTER;
       let batch = [];
+      // Guias de provedores costumam repetir o mesmo canal no XML: um programa por canal+início.
+      const seen = new Set();
       const flush = async () => {
         if (!batch.length) return;
         const col = (k) => batch.map((p) => p[k]);
@@ -67,6 +69,9 @@ export async function syncEpg(playlistId) {
         for (const p of parser.push(chunk)) {
           const key = p.channel.toLowerCase();
           if (!wanted.has(key) || p.stop.getTime() < from || p.start.getTime() > to) continue;
+          const dup = `${key}|${p.start.getTime()}`;
+          if (seen.has(dup)) continue;
+          seen.add(dup);
           batch.push({ ...p, channel: key });
           if (batch.length >= BATCH) await flush();
         }
@@ -81,4 +86,42 @@ export async function syncEpg(playlistId) {
     console.warn('epg', playlistId, err.message);
     await prisma.playlist.update({ where: { id: playlistId }, data: { epgError: `Guia indisponível: ${err.message}`, epgSyncedAt: new Date() } }).catch(() => {});
   }
+}
+
+/** Agora e a seguir para vários canais de uma vez: Map "playlistId|tvg-id" → { now, next }. */
+export async function nowNext(rows) {
+  const live = rows.filter((r) => r.kind === 'live' && r.tvgId);
+  const out = new Map();
+  if (!live.length) return out;
+  const now = new Date();
+  const progs = await prisma.programme.findMany({
+    where: {
+      playlistId: { in: [...new Set(live.map((r) => r.playlistId))] },
+      channel: { in: [...new Set(live.map((r) => r.tvgId.toLowerCase()))] },
+      stop: { gt: now },
+      start: { lt: new Date(now.getTime() + 12 * 3600_000) },
+    },
+    orderBy: { start: 'asc' },
+    select: { playlistId: true, channel: true, start: true, stop: true, title: true },
+  });
+  for (const p of progs) {
+    const key = `${p.playlistId}|${p.channel}`;
+    const cur = out.get(key) || {};
+    const item = { title: p.title, start: p.start, stop: p.stop };
+    if (p.start <= now && !cur.now) cur.now = item;
+    else if (p.start > now && !cur.next) cur.next = item;
+    out.set(key, cur);
+  }
+  return out;
+}
+
+/** Programação de um canal: o atual e os próximos. */
+export function channelGuide(ch, limit = 24) {
+  if (ch.kind !== 'live' || !ch.tvgId) return Promise.resolve([]);
+  return prisma.programme.findMany({
+    where: { playlistId: ch.playlistId, channel: ch.tvgId.toLowerCase(), stop: { gt: new Date() } },
+    orderBy: { start: 'asc' },
+    take: limit,
+    select: { start: true, stop: true, title: true, desc: true },
+  });
 }
