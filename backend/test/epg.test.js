@@ -22,3 +22,15 @@ test('o leitor guarda os atributos do #EXTM3U', () => {
   assert.equal(p.header['x-tvg-url'], 'http://epg/a.xml');
   assert.equal(p.header['url-tvg'], 'http://epg/b.xml');
 });
+
+test('programas sobrepostos do provedor são descartados', async () => {
+  const { dropOverlaps } = await import('../src/epg.js');
+  const t = (h, m) => new Date(Date.UTC(2026, 10, 7, h, m));
+  const list = [
+    { title: 'A', start: t(1, 39), stop: t(2, 3) },
+    { title: 'A (repetido)', start: t(1, 44), stop: t(2, 8) },
+    { title: 'B', start: t(2, 3), stop: t(2, 26) },
+    { title: 'C', start: t(2, 25), stop: t(3, 0) },
+  ];
+  assert.deepEqual(dropOverlaps(list).map((p) => p.title), ['A', 'B', 'C']);
+});
