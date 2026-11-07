@@ -6,8 +6,10 @@ import { AuthProvider } from './auth';
 import './index.css';
 import { installSpatialNav } from './spatial';
 import { applyPlatformClasses } from './platform';
+import { installTvScale } from './tvScale';
 
 applyPlatformClasses();
+installTvScale();
 installSpatialNav();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
