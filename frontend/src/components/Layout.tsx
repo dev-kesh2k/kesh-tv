@@ -1,4 +1,7 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { useEffect } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { platform } from '../platform';
+import { focusFirstContent } from '../spatial';
 import { Heart, History, ListVideo, Tv, UserRound } from 'lucide-react';
 import { ErrorBoundary } from './ErrorBoundary';
 import { BackToTop } from './BackToTop';
@@ -23,6 +26,11 @@ export function Logo() {
 }
 
 export function Layout() {
+  const { pathname, search } = useLocation();
+  // TV: destaque já no conteúdo ao trocar de tela (controle remoto funciona de cara).
+  useEffect(() => {
+    if (platform.tv && !pathname.includes('/assistir/')) focusFirstContent();
+  }, [pathname, search]);
   return (
     <div className="min-h-[100dvh] lg:flex">
       <aside className="tv-sidebar sticky top-0 hidden h-[100dvh] w-60 shrink-0 flex-col border-r border-ink-800 bg-ink-900/60 px-4 py-6 lg:flex">
