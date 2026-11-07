@@ -33,6 +33,8 @@ export function Player({
   onPlaying,
   startAt = 0,
   onProgress,
+  controls = true,
+  fill = false,
 }: {
   sources: Source[];
   title: string;
@@ -41,6 +43,10 @@ export function Player({
   startAt?: number;
   /** Posição absoluta e duração, a cada ~15 s, ao pausar e ao sair. */
   onProgress?: (position: number, duration: number) => void;
+  /** Controles nativos do navegador (na TV ficam escondidos: o controle remoto comanda). */
+  controls?: boolean;
+  /** Ocupar todo o espaço do pai (tela cheia da TV) em vez de 16:9. */
+  fill?: boolean;
 }) {
   const video = useRef<HTMLVideoElement>(null);
   const [index, setIndex] = useState(0);
@@ -312,8 +318,8 @@ export function Player({
 
   return (
     <div ref={box} className="bg-black sm:bg-transparent">
-    <div className="relative aspect-video w-full overflow-hidden bg-black sm:rounded-2xl">
-      <video ref={video} className="h-full w-full bg-black" controls playsInline autoPlay title={title} />
+    <div className={`relative w-full overflow-hidden bg-black ${fill ? 'h-full' : 'aspect-video sm:rounded-2xl'}`}>
+      <video ref={video} className="h-full w-full bg-black" controls={controls} playsInline autoPlay title={title} />
       {muted && state === 'playing' && (
         <button
           type="button"
