@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-07 (tarde)
+
+### Adicionado
+- **Guia de programação (EPG)**: descobre o XMLTV da lista (`url-tvg` ou `xmltv.php` do Xtream), mostra o programa no ar nos cartões e a programação na tela do canal.
+- **Continuar de onde parou** em filmes e episódios, com barras de progresso e "Continuar T1 · E03 · 21:08".
+- **Exportar e importar favoritos** (JSON), achando os canais pela URL ou pelo nome.
+- **Grupos ocultos**, fileiras "Seus favoritos" e "Continuar assistindo", ordem A–Z dos grupos.
+- Player: atalhos de teclado, Mini player (Picture-in-Picture), timer para desligar e selo AO VIVO.
+- Resumo em Conta, × para tirar itens dos Recentes, botão voltar ao topo, cartões de carregamento, título da aba por página, tela amigável de erro.
+
+### Corrigido
+- Pausar logo após abrir o vídeo fazia ele voltar a tocar sem som.
+- Programas sobrepostos no guia do provedor.
+
 ## 2026-11-07
 
 ### Adicionado
