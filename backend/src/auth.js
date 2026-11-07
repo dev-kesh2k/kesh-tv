@@ -45,3 +45,14 @@ export function recordFailure(key) {
   attempts.set(key, list);
 }
 export const clearFailures = (key) => attempts.delete(key);
+
+/** Apaga tentativas que já saíram da janela (senão o mapa só cresce com IPs/e-mails diferentes). */
+export function pruneAttempts(now = Date.now()) {
+  for (const [key, list] of attempts) {
+    const recent = list.filter((t) => now - t < WINDOW);
+    if (recent.length) attempts.set(key, recent);
+    else attempts.delete(key);
+  }
+  return attempts.size;
+}
+setInterval(pruneAttempts, WINDOW).unref();
