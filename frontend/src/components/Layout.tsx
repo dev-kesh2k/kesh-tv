@@ -5,6 +5,15 @@ import { focusFirstContent } from '../spatial';
 import { Heart, History, ListVideo, Tv, UserRound } from 'lucide-react';
 import { ErrorBoundary } from './ErrorBoundary';
 import { BackToTop } from './BackToTop';
+import { useAuth } from '../auth';
+
+const initials = (s: string) =>
+  s
+    .split(/[\s@.]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join('');
 
 const NAV = [
   { to: '/', label: 'Canais', icon: Tv, end: true },
@@ -25,31 +34,47 @@ export function Logo() {
 
 export function Layout() {
   const { pathname, search } = useLocation();
+  const { user } = useAuth();
   // TV: destaque já no conteúdo ao trocar de tela (controle remoto funciona de cara).
   useEffect(() => {
     if (platform.tv && !pathname.includes('/assistir/')) focusFirstContent();
   }, [pathname, search]);
   return (
     <div className="min-h-[100dvh] lg:flex">
-      <aside className="tv-sidebar sticky top-0 hidden h-[100dvh] w-60 shrink-0 flex-col border-r border-ink-800 bg-ink-900/60 px-4 py-6 lg:flex">
-        <div className="mb-8 px-2">
+      <aside className="tv-sidebar sticky top-0 hidden h-[100dvh] w-56 shrink-0 flex-col border-r border-ink-800 bg-ink-950 px-3 py-6 lg:flex">
+        <div className="mb-8 px-3">
           <Logo />
         </div>
-        <nav className="-mx-4 flex flex-col gap-1">
+        <nav className="flex flex-col gap-1">
           {NAV.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
               end={end}
               className={({ isActive }) =>
-                `flex min-h-[44px] items-center gap-3 border-l-[3px] px-3 text-[0.95rem] transition-colors ${isActive ? 'border-brand font-semibold text-slate-100' : 'border-transparent text-slate-400 hover:text-slate-100'}`
+                `group flex min-h-[44px] items-center gap-3 rounded-lg px-3 text-[0.95rem] transition-colors ${
+                  isActive ? 'bg-ink-800 font-semibold text-slate-100' : 'text-slate-400 hover:bg-ink-900 hover:text-slate-100'
+                }`
               }
             >
-              <Icon className="h-5 w-5" />
-              {label}
+              {({ isActive }) => (
+                <>
+                  <Icon className={`h-5 w-5 shrink-0 ${isActive ? 'text-brand' : 'text-slate-500 group-hover:text-slate-300'}`} />
+                  {label}
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
+        {user && (
+          <div className="mt-auto flex items-center gap-3 border-t border-ink-800 px-3 pt-4">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ink-800 text-xs font-semibold text-slate-300">{initials(user.name || user.email)}</span>
+            <div className="min-w-0 text-sm">
+              <p className="truncate text-slate-200">{user.name || 'Conta'}</p>
+              <p className="truncate text-xs text-slate-500">{user.email}</p>
+            </div>
+          </div>
+        )}
       </aside>
 
       <div className="min-w-0 flex-1 pb-[calc(64px+env(safe-area-inset-bottom))] lg:pb-0">
