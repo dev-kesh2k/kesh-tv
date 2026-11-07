@@ -3,6 +3,7 @@
 import crypto from 'node:crypto';
 import dns from 'node:dns/promises';
 import net from 'node:net';
+import { Agent, fetch } from 'undici';
 import { HttpError } from './db.js';
 
 const KEY = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
@@ -85,6 +86,26 @@ export async function assertPublic(url) {
   return u;
 }
 
+/**
+ * A conexão usa o mesmo IP que foi checado: resolve o DNS aqui e recusa endereço interno no momento de
+ * conectar (impede "DNS rebinding": responder IP público na checagem e 127.0.0.1 na conexão).
+ */
+const pinnedAgent = new Agent({
+  connect: {
+    lookup(hostname, options, cb) {
+      dns
+        .lookup(hostname, { all: true })
+        .then((addrs) => {
+          const ok = addrs.filter((a) => !blockedIp(a.address));
+          if (!ok.length || ok.length !== addrs.length) return cb(new HttpError(400, 'Endereço não permitido'));
+          if (options?.all) cb(null, ok);
+          else cb(null, ok[0].address, ok[0].family);
+        })
+        .catch((err) => cb(err));
+    },
+  },
+});
+
 /** fetch com redirecionamentos conferidos um a um (cada destino passa pela checagem de rede). */
 export async function safeFetch(url, { headers = {}, signal, timeoutMs = 20000, ua = '', ref = '' } = {}) {
   let current = url;
@@ -99,6 +120,7 @@ export async function safeFetch(url, { headers = {}, signal, timeoutMs = 20000, 
     let res;
     try {
       res = await fetch(current, {
+        dispatcher: pinnedAgent,
         redirect: 'manual',
         signal: ctrl.signal,
         headers: { 'User-Agent': ua || DEFAULT_UA, Accept: '*/*', ...(ref ? { Referer: ref } : {}), ...headers },
