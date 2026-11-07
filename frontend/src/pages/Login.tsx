@@ -24,8 +24,8 @@ export default function Login() {
   };
 
   return (
-    <main className="flex min-h-[100dvh] flex-col justify-center px-6 py-[max(2rem,env(safe-area-inset-top))] sm:px-12">
-      <form onSubmit={submit} className="w-full max-w-sm">
+    <main className="flex min-h-[100dvh] flex-col items-center justify-center px-6 py-[max(2rem,env(safe-area-inset-top))] sm:px-12">
+      <form onSubmit={submit} className="w-full max-w-sm sm:-mt-[8vh]">
         <Logo />
         <h1 className="font-display mt-10 text-3xl leading-tight text-slate-100">Entre para ver seus canais</h1>
         <div className="mt-8 space-y-4">
