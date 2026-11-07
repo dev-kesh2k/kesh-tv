@@ -4,6 +4,17 @@ name: Deploy
 on:
   push:
     branches: [main]
+    # Só documentação/configuração do GitHub: não precisa republicar o app.
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - '.editorconfig'
+      - '.gitattributes'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
+      - '.github/dependabot.yml'
+      - '.github/workflows/ci.yml'
+      - 'docs/**'
   workflow_dispatch:
 
 env:
