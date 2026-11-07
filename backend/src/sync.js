@@ -59,16 +59,16 @@ async function insertBatch(playlistId, items, syncId) {
   const part = [...new Map(items.map((it) => [it.url, it])).values()];
   const col = (k) => part.map((it) => it[k]);
   await prisma.$executeRaw`
-    INSERT INTO "Channel" ("playlistId","name","groupTitle","logo","tvgId","url","kind","userAgent","referrer","position","seriesName","season","episode","syncId")
+    INSERT INTO "Channel" ("playlistId","name","groupTitle","logo","tvgId","url","kind","userAgent","referrer","position","seriesName","season","episode","searchName","syncId")
     SELECT ${playlistId}::uuid, * FROM unnest(
       ${col('name')}::text[], ${col('groupTitle')}::text[], ${col('logo')}::text[], ${col('tvgId')}::text[],
       ${col('url')}::text[], ${col('kind')}::text[], ${col('userAgent')}::text[], ${col('referrer')}::text[],
-      ${col('position')}::int[], ${col('seriesName')}::text[], ${col('season')}::int[], ${col('episode')}::int[],
+      ${col('position')}::int[], ${col('seriesName')}::text[], ${col('season')}::int[], ${col('episode')}::int[], ${col('searchName')}::text[],
       array_fill(${syncId}::text, ARRAY[${part.length}::int]))
     ON CONFLICT ("playlistId","url") DO UPDATE SET
       "name"=EXCLUDED."name","groupTitle"=EXCLUDED."groupTitle","logo"=EXCLUDED."logo","tvgId"=EXCLUDED."tvgId",
       "kind"=EXCLUDED."kind","userAgent"=EXCLUDED."userAgent","referrer"=EXCLUDED."referrer","position"=EXCLUDED."position",
-      "seriesName"=EXCLUDED."seriesName","season"=EXCLUDED."season","episode"=EXCLUDED."episode","syncId"=EXCLUDED."syncId"`;
+      "seriesName"=EXCLUDED."seriesName","season"=EXCLUDED."season","episode"=EXCLUDED."episode","searchName"=EXCLUDED."searchName","syncId"=EXCLUDED."syncId"`;
 }
 
 /** Lê e grava a lista; só apaga os canais que sumiram se a leitura terminou inteira. Devolve contagens e o cabeçalho #EXTM3U. */

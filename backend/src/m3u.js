@@ -1,5 +1,8 @@
 // Leitura de listas M3U/M3U8 (formato estendido #EXTM3U/#EXTINF, com atributos tvg-* e group-title).
 
+/** Texto para busca: minúsculas e sem acentos ("Ação" acha com "acao"). */
+export const normalizeSearch = (s) => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
 const ATTR_RE = /([A-Za-z0-9_-]+)="([^"]*)"/g;
 
 /**
@@ -95,6 +98,7 @@ export function createParser({ dedupe = true } = {}) {
       const kind = classify(url, groupTitle);
       const item = {
         name,
+        searchName: normalizeSearch(name),
         groupTitle,
         logo: cut(a['tvg-logo'] || a['logo'] || '', 1000),
         tvgId: cut(a['tvg-id'] || '', 120),
