@@ -48,14 +48,14 @@ fun PlaylistsScreen(api: Api) {
   }
 
   Column(Modifier.fillMaxSize()) {
-    Text("Listas", style = MaterialTheme.typography.headlineSmall, fontFamily = Condensed, modifier = Modifier.padding(20.dp, 16.dp, 20.dp, 0.dp))
-    Text("Para adicionar ou editar listas, use o site do Kesh TV.", style = MaterialTheme.typography.bodySmall, color = Kesh.Fog, modifier = Modifier.padding(20.dp, 4.dp, 20.dp, 8.dp))
+    Text("Listas", style = MaterialTheme.typography.headlineSmall, fontFamily = Condensed, modifier = Modifier.padding(sideMargin(), 12.dp, sideMargin(), 0.dp))
+    Text("Para adicionar ou editar listas, use o site do Kesh TV.", style = MaterialTheme.typography.bodySmall, color = Kesh.Fog, modifier = Modifier.padding(sideMargin(), 4.dp, sideMargin(), 8.dp))
     val items = list
     when {
-      error.isNotEmpty() -> Text(error, color = Kesh.Tally, modifier = Modifier.padding(20.dp))
+      error.isNotEmpty() -> Text(error, color = Kesh.Tally, modifier = Modifier.padding(horizontal = sideMargin(), vertical = 12.dp))
       items == null -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator(color = Kesh.Signal) }
-      items.isEmpty() -> Text("Nenhuma lista cadastrada.", color = Kesh.Fog, modifier = Modifier.padding(20.dp))
-      else -> LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+      items.isEmpty() -> Text("Nenhuma lista cadastrada.", color = Kesh.Fog, modifier = Modifier.padding(horizontal = sideMargin(), vertical = 12.dp))
+      else -> LazyColumn(contentPadding = PaddingValues(horizontal = sideMargin(), vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         items(items, key = { it.id }) { pl ->
           Row(
             Modifier.fillMaxWidth().background(Kesh.Panel, RoundedCornerShape(8.dp)).padding(16.dp),
