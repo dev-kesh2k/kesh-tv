@@ -33,7 +33,22 @@ export function verify(q) {
   return { url: unb64(u), ua: extra.ua || '', ref: extra.ref || '' };
 }
 
-function blockedIp(ip) {
+/** Expande um IPv6 para 8 grupos de 16 bits (aceita "::" e IPv4 no final, ex.: ::ffff:1.2.3.4). */
+function ipv6Groups(ip) {
+  let v = ip.toLowerCase().split('%')[0];
+  const dotted = v.match(/(\d+\.\d+\.\d+\.\d+)$/);
+  if (dotted) {
+    const [a, b, c, d] = dotted[1].split('.').map(Number);
+    v = v.slice(0, -dotted[1].length) + `${((a << 8) | b).toString(16)}:${((c << 8) | d).toString(16)}`;
+  }
+  const [head, tail] = v.split('::');
+  const h = head ? head.split(':') : [];
+  const t = tail !== undefined && tail ? tail.split(':') : [];
+  const fill = tail !== undefined ? Array(8 - h.length - t.length).fill('0') : [];
+  return [...h, ...fill, ...t].map((g) => parseInt(g || '0', 16));
+}
+
+export function blockedIp(ip) {
   if (net.isIPv4(ip)) {
     const [a, b] = ip.split('.').map(Number);
     if (a === 0 || a === 127 || a >= 224) return true;
@@ -42,9 +57,16 @@ function blockedIp(ip) {
     if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
     return false;
   }
-  const v = ip.toLowerCase();
-  if (v.startsWith('::ffff:')) return blockedIp(v.slice(7));
-  return v === '::' || v === '::1' || v.startsWith('fe80') || v.startsWith('fc') || v.startsWith('fd') || v.startsWith('ff');
+  if (!net.isIPv6(ip)) return true;
+  const g = ipv6Groups(ip);
+  // IPv4 dentro do IPv6 (::ffff:a.b.c.d, ::a.b.c.d e NAT64 64:ff9b::a.b.c.d), em qualquer escrita: vale a regra do IPv4.
+  const zeros5 = g.slice(0, 5).every((x) => x === 0);
+  if ((zeros5 && (g[5] === 0xffff || g[5] === 0)) || (g[0] === 0x64 && g[1] === 0xff9b && g.slice(2, 6).every((x) => x === 0))) {
+    if (zeros5 && g[5] === 0 && g[6] === 0 && g[7] <= 1) return true; // :: e ::1
+    return blockedIp(`${g[6] >> 8}.${g[6] & 255}.${g[7] >> 8}.${g[7] & 255}`);
+  }
+  const first = g[0];
+  return (first & 0xffc0) === 0xfe80 || (first & 0xfe00) === 0xfc00 || (first & 0xff00) === 0xff00; // link-local, ULA, multicast
 }
 
 export async function assertPublic(url) {
