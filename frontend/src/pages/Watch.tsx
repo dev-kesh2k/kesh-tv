@@ -18,6 +18,13 @@ interface PlayInfo {
   duration: number;
 }
 
+/** Tipo no subtítulo só quando acrescenta algo: ao vivo já tem o selo e "Filmes | Ação" já diz que é filme. */
+function subtitleKind(ch: Channel) {
+  if (ch.kind === 'live') return '';
+  const label = KIND_LABEL[ch.kind];
+  return ch.group.toLowerCase().includes(label.toLowerCase().slice(0, 5)) ? '' : label;
+}
+
 const fmtTime = (t: number) => {
   const s = Math.floor(t);
   const h = Math.floor(s / 3600);
@@ -175,9 +182,9 @@ export default function Watch() {
                         {around.series}
                       </Link>
                     ) : (
-                      KIND_LABEL[ch.kind]
+                      subtitleKind(ch)
                     )}
-                    {ch.group ? ` · ${ch.group}` : ''}
+                    {ch.group ? `${around?.series || subtitleKind(ch) ? ' · ' : ''}${ch.group}` : ''}
                   </p>
                 )}
               </div>
