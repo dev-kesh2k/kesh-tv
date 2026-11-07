@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String
+  email        String     @unique
+  role         String     @default("user")
+  passwordHash String
+  createdAt    DateTime   @default(now())
+  playlists    Playlist[]
+  favorites    Favorite[]
+  history      History[]
+}
+
+model Playlist {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String    @db.Uuid
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  url          String?
+  autoRefresh  Boolean   @default(true)
+  channelCount Int       @default(0)
+  liveCount    Int       @default(0)
+  movieCount   Int       @default(0)
+  seriesCount  Int       @default(0)
+  status       String    @default("pending")
+  error        String?
+  syncedAt     DateTime?
+  syncStarted  DateTime?
+  createdAt    DateTime  @default(now())
+  channels     Channel[]
+
+  @@index([userId])
+}
+
+model Channel {
+  id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  playlistId String     @db.Uuid
+  playlist   Playlist   @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  name       String
+  groupTitle String     @default("")
+  logo       String     @default("")
+  tvgId      String     @default("")
+  url        String
+  kind       String     @default("live")
+  userAgent  String     @default("")
+  referrer   String     @default("")
+  position   Int        @default(0)
+  syncId     String     @default("")
+  favorites  Favorite[]
+  history    History[]
+
+  @@unique([playlistId, url])
+  @@index([playlistId, kind, groupTitle, position])
+}
+
+model Favorite {
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channelId String   @db.Uuid
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, channelId])
+}
+
+model History {
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channelId String   @db.Uuid
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  watchedAt DateTime @default(now())
+
+  @@id([userId, channelId])
+  @@index([userId, watchedAt])
+}

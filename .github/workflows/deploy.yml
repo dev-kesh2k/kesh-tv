@@ -1,0 +1,46 @@
+name: Deploy
+
+# main -> produção (/kesh-tv/). Não há ambiente de testes: todo push na main vai para o ar.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  SLUG: kesh-tv
+  APP_NAME: Kesh Tv
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, hub]
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      # Cópia de entrega: o Hub publica daqui e a pasta de trabalho do Criador não é tocada.
+      - name: Sincronizar código com o Hub
+        run: |
+          mkdir -p "/opt/hub/data/app-builder/deploy/$SLUG"
+          rsync -a --delete --exclude '.git' --exclude 'node_modules' --exclude 'dist' \
+            ./ "/opt/hub/data/app-builder/deploy/$SLUG/"
+
+      - name: Publicar no Hub
+        env:
+          HUB_DEPLOY_TOKEN: ${{ secrets.HUB_DEPLOY_TOKEN }}
+        run: |
+          # 409 = outro deploy ainda em andamento: espera e tenta de novo.
+          for i in $(seq 1 30); do
+            code=$(curl -sS -o /tmp/hub-deploy-$SLUG.json -w '%{http_code}' -X POST \
+              -H "x-deploy-token: $HUB_DEPLOY_TOKEN" -H 'Content-Type: application/json' \
+              -d "{\"name\":\"$APP_NAME\"}" \
+              "http://127.0.0.1:3001/api/aplicacoes/deploy-hook/$SLUG")
+            cat /tmp/hub-deploy-$SLUG.json; echo
+            [ "$code" = 200 ] && exit 0
+            [ "$code" = 409 ] || exit 1
+            sleep 20
+          done
+          exit 1
