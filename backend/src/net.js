@@ -90,6 +90,8 @@ export async function safeFetch(url, { headers = {}, signal, timeoutMs = 20000, 
   let current = url;
   for (let hop = 0; hop < 6; hop++) {
     await assertPublic(current);
+    // Pedido já cancelado por quem chamou (ex.: o usuário fechou o vídeo durante a checagem de DNS).
+    if (signal?.aborted) throw signal.reason ?? new Error('aborted');
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(new Error('timeout')), timeoutMs);
     const onAbort = () => ctrl.abort(signal.reason);
