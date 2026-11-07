@@ -1,0 +1,1 @@
+ALTER TABLE "User" ADD COLUMN "hiddenGroups" TEXT[] DEFAULT ARRAY[]::TEXT[];
