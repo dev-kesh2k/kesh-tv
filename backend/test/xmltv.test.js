@@ -33,3 +33,16 @@ test('lê programas mesmo cortados em pedaços aleatórios', () => {
   assert.equal(got[0].start.toISOString(), '2026-11-07T23:00:00.000Z');
   assert.equal(got[1].title, 'Novela <das 9>');
 });
+
+test('guia compactado é reconhecido pela assinatura gzip', async () => {
+  const zlib = await import('node:zlib');
+  const { Readable } = await import('node:stream');
+  const { maybeGunzip } = await import('../src/epg.js');
+  const read = async (s) => {
+    let t = '';
+    for await (const c of s.setEncoding('utf8')) t += c;
+    return t;
+  };
+  assert.equal(await read(await maybeGunzip(Readable.from([zlib.gzipSync('<tv>gz</tv>')]))), '<tv>gz</tv>');
+  assert.equal(await read(await maybeGunzip(Readable.from([Buffer.from('<tv>'), Buffer.from('plano</tv>')]))), '<tv>plano</tv>');
+});
