@@ -83,6 +83,8 @@ model History {
   channelId String   @db.Uuid
   channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
   watchedAt DateTime @default(now())
+  position  Float    @default(0)
+  duration  Float    @default(0)
 
   @@id([userId, channelId])
   @@index([userId, watchedAt])
