@@ -26,6 +26,15 @@ export function ChannelLogo({ channel, className = '' }: { channel: Channel; cla
   );
 }
 
+/** Barrinha do quanto já foi assistido (verde quando terminou). */
+export function ProgressBar({ value, className = '' }: { value: number; className?: string }) {
+  return (
+    <div className={`h-1 bg-black/50 ${className}`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(value * 100)}>
+      <div className={`h-full ${value >= 1 ? 'bg-emerald-400' : 'bg-brand'}`} style={{ width: `${Math.max(3, Math.round(value * 100))}%` }} />
+    </div>
+  );
+}
+
 export function ChannelCard({ channel, onChange }: { channel: Channel; onChange?: (c: Channel) => void }) {
   const [busy, setBusy] = useState(false);
   const fav = async (e: React.MouseEvent) => {
@@ -44,7 +53,10 @@ export function ChannelCard({ channel, onChange }: { channel: Channel; onChange?
       to={`/assistir/${channel.id}`}
       className="group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-ink-700/60 bg-ink-900 transition hover:border-brand/60 hover:bg-ink-850 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
     >
-      <ChannelLogo channel={channel} className={`w-full ${poster ? 'aspect-[3/4]' : 'aspect-video'}`} />
+      <div className="relative">
+        <ChannelLogo channel={channel} className={`w-full ${poster ? 'aspect-[3/4]' : 'aspect-video'}`} />
+        {!!channel.progress && <ProgressBar value={channel.progress} className="absolute inset-x-0 bottom-0" />}
+      </div>
       <div className="flex min-h-[52px] items-start gap-1 p-2.5 pr-1">
         <div className="min-w-0 flex-1">
           <p className="line-clamp-2 text-[13px] font-medium leading-snug text-slate-100">{channel.name}</p>
