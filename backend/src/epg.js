@@ -58,10 +58,13 @@ export async function syncEpg(playlistId) {
       const flush = async () => {
         if (!batch.length) return;
         const col = (k) => batch.map((p) => p[k]);
+        // Horários em ISO convertidos explicitamente para UTC: não dependem do fuso da sessão do Postgres.
         await prisma.$executeRaw`
           INSERT INTO "Programme" ("playlistId","channel","start","stop","title","desc","syncId")
-          SELECT ${playlistId}::uuid, * FROM unnest(${col('channel')}::text[], ${col('start')}::timestamp[], ${col('stop')}::timestamp[],
-            ${col('title')}::text[], ${col('desc')}::text[], array_fill(${syncId}::text, ARRAY[${batch.length}::int]))`;
+          SELECT ${playlistId}::uuid, u.channel, (u.start::timestamptz AT TIME ZONE 'UTC'), (u.stop::timestamptz AT TIME ZONE 'UTC'),
+                 u.title, u.description, ${syncId}
+          FROM unnest(${col('channel')}::text[], ${batch.map((p) => p.start.toISOString())}::text[], ${batch.map((p) => p.stop.toISOString())}::text[],
+                      ${col('title')}::text[], ${col('desc')}::text[]) AS u(channel, start, stop, title, description)`;
         count += batch.length;
         batch = [];
       };
