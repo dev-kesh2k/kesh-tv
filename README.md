@@ -117,10 +117,29 @@ Abra **http://localhost:8080**, entre com `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSW
 
 O app é um WebView que abre o Kesh TV publicado: atualizações do site chegam sem reinstalar. Ele informa ao site que está numa TV (modo TV automático) e mantém a tela acesa durante o vídeo.
 
-## Na TV pelo navegador / iPhone
+## Modo TV e controle remoto
 
-- **Modo TV**: reconhecido sozinho em Android TV, Fire TV, Samsung (Tizen) e LG (webOS); dá para forçar em Conta → Modo TV ou com `?tv=1`. Controle: setas navegam, OK abre/pausa, Voltar retorna.
-- **iPhone/iPad**: Safari → Compartilhar → *Adicionar à Tela de Início* (abre em tela cheia, como app).
+O modo TV liga sozinho em Android TV, Fire TV, Samsung (Tizen), LG (webOS) e no app Android numa TV. Dá para forçar em **Conta → Modo TV** (Automático / Ligado / Desligado) ou com `?tv=1` / `?tv=0` no endereço.
+
+- **Escala para qualquer TV (32" a 100", 720p a 4K):** a página usa um *viewport* de 1280 px e a TV amplia até a tela real — o app ocupa sempre a mesma fração da tela.
+- **Margem de segurança** nas bordas (overscan), letras ~15% maiores e grade com 4 colunas.
+- **Foco inicial** no primeiro canal de cada tela; destaque rosa no item focado.
+- **Player em tela cheia** com painel de informações (canal, AO VIVO, programa atual/próximo) que some em 5 s.
+
+| Tecla | Nas listas | No player |
+| --- | --- | --- |
+| ↑ ↓ ← → | move o destaque para o item mais próximo | ↑↓ trocam de canal/episódio · ←→ voltam/avançam 10 s |
+| OK / Enter | abre | pausa/retoma (o 1º OK liga o som se começou mudo) |
+| Voltar / Backspace | tela anterior (não sai do app na 1ª tela) | sai do player |
+| Play, Pause, Stop | — | controlam o vídeo |
+| Espaço / K · F · M | — | pausa · tela cheia · mudo (teclado) |
+| Canal + / Canal − | — | trocam de canal |
+
+## iPhone, iPad e Android pelo navegador
+
+- **iPhone/iPad:** Safari → Compartilhar → *Adicionar à Tela de Início* (abre em tela cheia, como app).
+- **Android:** Chrome → *Instalar app*; segurar o ícone mostra atalhos para Favoritos, Recentes e Filmes.
+- O app guarda telas e arquivos (service worker) e abre sem internet; sem conexão mostra "Sem conexão" e reconecta sozinho.
 
 ## Rodando localmente (desenvolvimento)
 
