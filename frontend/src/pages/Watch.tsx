@@ -5,6 +5,7 @@ import { api, Channel, KIND_LABEL, seriesLink, Source, toggleFavorite } from '..
 import { ChannelLogo } from '../components/ChannelCard';
 import { Player } from '../components/Player';
 import { Guide } from '../components/Guide';
+import { useTitle } from '../useTitle';
 import { btnGhost, ErrorBox, Spinner } from '../components/ui';
 
 interface PlayInfo {
@@ -37,6 +38,7 @@ export default function Watch() {
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  useTitle(info?.channel.name);
 
   useEffect(() => {
     let alive = true;

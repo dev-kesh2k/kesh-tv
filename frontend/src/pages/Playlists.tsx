@@ -3,6 +3,7 @@ import { AlertCircle, CalendarClock, CheckCircle2, FileUp, Link2, ListVideo, Loa
 import { api, Playlist, useApi } from '../api';
 import { Page } from '../components/Layout';
 import { btnDanger, btnGhost, btnPrimary, card, Empty, ErrorBox, input, PageTitle, Spinner, Switch } from '../components/ui';
+import { useTitle } from '../useTitle';
 
 const fmt = (n: number) => n.toLocaleString('pt-BR');
 const when = (s: string | null) => (s ? new Date(s).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'nunca');
@@ -203,6 +204,7 @@ export default function Playlists() {
   const [adding, setAdding] = useState(false);
   const list = data?.playlists || [];
   const syncing = list.some((p) => p.status === 'syncing');
+  useTitle('Listas');
 
   // Enquanto alguma lista importa, consulta o andamento a cada 2 s.
   useEffect(() => {
