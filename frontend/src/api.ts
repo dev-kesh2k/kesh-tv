@@ -100,6 +100,10 @@ export interface Playlist {
   error: string | null;
   syncedAt: string | null;
   syncProgress: number;
+  epgUrl: string | null;
+  epgCount: number;
+  epgError: string | null;
+  epgSyncedAt: string | null;
 }
 
 export interface Channel {
