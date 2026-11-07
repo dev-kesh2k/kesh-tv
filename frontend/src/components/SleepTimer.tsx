@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Moon } from 'lucide-react';
-import { btnGhost } from './ui';
+import { btnQuiet } from './ui';
 
 const OPTIONS = [15, 30, 60, 90];
 
@@ -31,7 +31,7 @@ export function SleepTimer({ programmeEnd }: { programmeEnd?: string }) {
 
   return (
     <div className="relative">
-      <button type="button" className={`${btnGhost} ${until ? 'text-brand-light' : ''}`} onClick={() => setOpen(!open)} aria-expanded={open}>
+      <button type="button" className={`${btnQuiet} ${until ? 'text-brand' : ''}`} onClick={() => setOpen(!open)} aria-expanded={open}>
         <Moon className="h-4 w-4" /> {until ? `Desliga em ${left} min` : 'Timer'}
       </button>
       {open && (
