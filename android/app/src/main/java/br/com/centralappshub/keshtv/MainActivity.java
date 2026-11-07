@@ -3,6 +3,8 @@ package br.com.centralappshub.keshtv;
 import android.app.Activity;
 import android.app.UiModeManager;
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.os.Bundle;
@@ -11,6 +13,8 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
 import android.widget.FrameLayout;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -83,7 +87,24 @@ public class MainActivity extends Activity {
     // O site reconhece o app pelo user agent e pela ponte (liga o modo TV sozinho na TV).
     s.setUserAgentString(s.getUserAgentString() + " KeshTV-Android/" + BuildConfig.VERSION_NAME + (isTv() ? " (TV)" : ""));
     web.addJavascriptInterface(new Bridge(), "KeshNative");
-    web.setWebViewClient(new WebViewClient());
+    final String host = Uri.parse(BuildConfig.START_URL).getHost();
+    web.setWebViewClient(new WebViewClient() {
+      // Links de fora do Kesh TV abrem no navegador do aparelho.
+      @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
+        if (host != null && host.equals(r.getUrl().getHost())) return false;
+        try { startActivity(new Intent(Intent.ACTION_VIEW, r.getUrl())); } catch (Exception ignored) {}
+        return true;
+      }
+      // Sem internet na primeira abertura: tela própria com "Tentar de novo" (já em foco para o controle).
+      @Override public void onReceivedError(WebView v, WebResourceRequest r, WebResourceError e) {
+        if (!r.isForMainFrame()) return;
+        String html = "<meta name=viewport content='width=device-width,initial-scale=1'>"
+          + "<body style='margin:0;background:#07090d;color:#fff;font-family:sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;text-align:center'>"
+          + "<div style='padding:24px'><h2>Sem conexão</h2><p style='color:#94a3b8'>Confira a internet do aparelho.</p>"
+          + "<button autofocus onclick=\"location.href='" + BuildConfig.START_URL + "'\" style='background:#f43f5e;color:#fff;border:0;border-radius:14px;padding:14px 32px;font-size:18px;outline-offset:4px'>Tentar de novo</button></div>";
+        v.loadDataWithBaseURL(BuildConfig.START_URL, html, "text/html", "UTF-8", null);
+      }
+    });
     web.setWebChromeClient(new WebChromeClient() {
       @Override public void onShowCustomView(View view, CustomViewCallback callback) {
         if (fullView != null) { callback.onCustomViewHidden(); return; }
