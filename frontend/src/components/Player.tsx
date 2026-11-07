@@ -156,8 +156,9 @@ export function Player({
 
     // Navegadores bloqueiam autoplay com som: toca mudo e mostra o botão "Ativar som".
     const tryPlay = () =>
-      el.play().catch(() => {
-        if (cancelled) return;
+      el.play().catch((err: DOMException) => {
+        // Só autoplay bloqueado (NotAllowedError) vira "tocar mudo"; AbortError é o usuário pausando.
+        if (cancelled || err?.name !== 'NotAllowedError') return;
         el.muted = true;
         setMuted(true);
         el.play().catch(() => {
