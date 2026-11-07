@@ -30,6 +30,7 @@
 | --- | --- | --- |
 | <img src="docs/screenshots/celular-player.png" alt="Player no celular" /> | <img src="docs/screenshots/celular-serie.png" alt="Temporadas e episódios" /> | <img src="docs/screenshots/celular-filmes.png" alt="Filmes" /> |
 
+<img src="docs/screenshots/tv-canais.png" alt="Grade de canais no modo TV, com o destaque do controle remoto" />
 <img src="docs/screenshots/desktop-player.png" alt="Player no computador" />
 <img src="docs/screenshots/desktop-series.png" alt="Séries no computador" />
 
