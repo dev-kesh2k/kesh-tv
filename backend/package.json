@@ -3,11 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node src/server.js",
     "build": "for f in src/*.js prisma/seed.js; do node --check \"$f\" || exit 1; done",
-    "db:seed": "node prisma/seed.js"
+    "db:seed": "node prisma/seed.js",
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
