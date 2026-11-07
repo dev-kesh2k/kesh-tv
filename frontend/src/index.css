@@ -34,3 +34,17 @@ a:focus-visible > div:first-child,
 a:focus-visible {
   box-shadow: 0 0 0 6px rgba(244, 63, 94, 0.25);
 }
+
+/* Modo TV: margem de segurança (overscan) — muitas TVs cortam as bordas da imagem. */
+html.is-tv #root {
+  padding: 20px 32px;
+}
+html.is-tv .tv-sidebar {
+  top: 20px;
+  height: calc(100dvh - 40px);
+  border: 1px solid #181d29;
+  border-radius: 1rem;
+}
+html.is-tv body {
+  overflow-x: hidden;
+}
