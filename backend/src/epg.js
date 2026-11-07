@@ -28,6 +28,19 @@ export function epgUrlFor(listUrl, header = {}) {
   return null;
 }
 
+/** Guia compactado (.xml.gz) é reconhecido pela assinatura gzip (1f 8b), não pelo nome/tipo do arquivo. */
+export async function maybeGunzip(stream) {
+  const it = stream[Symbol.asyncIterator]();
+  const first = await it.next();
+  const head = first.done ? Buffer.alloc(0) : Buffer.from(first.value);
+  async function* rest() {
+    if (!first.done) yield head;
+    for (let n = await it.next(); !n.done; n = await it.next()) yield n.value;
+  }
+  const whole = Readable.from(rest());
+  return head[0] === 0x1f && head[1] === 0x8b ? whole.pipe(zlib.createGunzip()) : whole;
+}
+
 /** Importa o guia de uma lista. Erros ficam gravados na lista (não atrapalham os canais). */
 export async function syncEpg(playlistId) {
   const pl = await prisma.playlist.findUnique({ where: { id: playlistId } });
@@ -46,9 +59,7 @@ export async function syncEpg(playlistId) {
     try {
       const { res } = await safeFetch(pl.epgUrl, { signal: ctrl.signal, timeoutMs: 60_000 });
       if (!res.ok) throw new Error(`o servidor do guia respondeu ${res.status}`);
-      let body = Readable.fromWeb(res.body);
-      if (/\.gz(\?|$)/i.test(pl.epgUrl) || /gzip/i.test(res.headers.get('content-type') || '')) body = body.pipe(zlib.createGunzip());
-      body.setEncoding('utf8');
+      const body = (await maybeGunzip(Readable.fromWeb(res.body))).setEncoding('utf8');
       const parser = createXmltvParser();
       const from = Date.now() - WINDOW_BEFORE;
       const to = Date.now() + WINDOW_AFTER;
