@@ -18,12 +18,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun AccountScreen(api: Api, store: Store, onLogout: () -> Unit, onBack: () -> Unit) {
+fun AccountScreen(api: Api, store: Store, onLogout: () -> Unit) {
   var user by remember { mutableStateOf<User?>(null) }
   LaunchedEffect(Unit) { user = runCatching { api.me() }.getOrNull() }
 
   Column(Modifier.fillMaxSize()) {
-    ScreenHeader("Conta", onBack)
+    Text("Conta", style = MaterialTheme.typography.headlineSmall, fontFamily = Condensed, modifier = Modifier.padding(20.dp, 16.dp, 20.dp, 0.dp))
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
       Info("Nome", user?.name ?: "…")
       Info("E-mail", user?.email ?: "…")
