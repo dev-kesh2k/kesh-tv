@@ -85,6 +85,7 @@ export interface User {
   email: string;
   role: string;
   createdAt?: string;
+  hiddenGroups?: string[];
 }
 
 export interface Playlist {

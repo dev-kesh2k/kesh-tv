@@ -1,5 +1,5 @@
 import { FormEvent, useState } from 'react';
-import { LogOut, Trash2, UserPlus } from 'lucide-react';
+import { Eye, LogOut, Trash2, UserPlus } from 'lucide-react';
 import { api, User, useApi } from '../api';
 import { useAuth } from '../auth';
 import { Page } from '../components/Layout';
@@ -132,6 +132,31 @@ export default function Account() {
             Trocar senha
           </button>
         </form>
+
+        <section className={`${card} p-4 sm:p-5`}>
+          <h2 className="font-semibold">Grupos ocultos</h2>
+          {user.hiddenGroups?.length ? (
+            <ul className="mt-3 divide-y divide-ink-700/60">
+              {user.hiddenGroups.map((g) => (
+                <li key={g} className="flex items-center gap-3 py-2">
+                  <span className="min-w-0 flex-1 truncate text-sm">{g || 'Sem grupo'}</span>
+                  <button
+                    type="button"
+                    className={btnGhost}
+                    onClick={async () => {
+                      const r = await api.put<{ hiddenGroups: string[] }>('prefs/hidden-groups', { groups: user.hiddenGroups!.filter((x) => x !== g) });
+                      setUser({ ...user, hiddenGroups: r.hiddenGroups });
+                    }}
+                  >
+                    <Eye className="h-4 w-4" /> Mostrar
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-1 text-sm text-slate-400">Nenhum. Use o ícone de olho ao lado de um grupo, na lista de grupos, para escondê-lo.</p>
+          )}
+        </section>
 
         {user.role === 'admin' && <Users me={user} />}
 
