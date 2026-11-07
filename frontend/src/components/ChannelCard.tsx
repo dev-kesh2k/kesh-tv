@@ -137,3 +137,20 @@ export function SkeletonGrid({ count = 12, poster = false }: { count?: number; p
     </div>
   );
 }
+
+/** Fileira horizontal de cartões (atalhos no topo da página). */
+export function Shelf({ title, channels }: { title: string; channels: Channel[] }) {
+  if (!channels.length) return null;
+  return (
+    <section className="mb-5">
+      <h2 className="mb-2 text-sm font-semibold text-slate-300">{title}</h2>
+      <div className="no-scrollbar -mx-3 flex snap-x gap-2.5 overflow-x-auto px-3 pb-1 sm:mx-0 sm:px-0">
+        {channels.map((c) => (
+          <div key={c.id} className={`shrink-0 snap-start ${c.kind === 'live' ? 'w-40 sm:w-48' : 'w-32 sm:w-36'}`}>
+            <ChannelCard channel={c} />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
