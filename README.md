@@ -1,20 +1,83 @@
+<div align="center">
+
+<img src="frontend/public/icon.svg" width="88" alt="Kesh TV" />
+
 # Kesh TV
 
-Leitor de listas IPTV M3U: adicione a lista por link (atualizada sozinha 1×/dia) ou por arquivo e assista aos canais no navegador do celular, tablet ou computador.
+**Leitor de listas IPTV M3U para o navegador** — canais ao vivo, filmes e séries no celular, tablet ou computador, sem instalar nada.
 
-- Canais separados em Ao vivo, Filmes e Séries, por grupo (`group-title`), com busca, favoritos e recentes.
-- Player: HLS (hls.js / nativo no iPhone), MPEG-TS e FLV (mpegts.js) e arquivos (MP4). Se uma fonte falhar, tenta a próxima: link direto → proxy do servidor; em servidores Xtream tenta também a versão `.m3u8` do canal.
-- Proxy no servidor (`/api/stream`, links assinados com validade) para streams `http://` (bloqueados em página HTTPS), sem CORS ou com `User-Agent`/`Referer` próprios (`#EXTVLCOPT`). Endereços internos (loopback, Docker, metadados) são bloqueados.
-- Logos pelo proxy `/api/logo` (cache de 7 dias no navegador).
-- Reimportar a lista mantém favoritos e recentes dos canais que continuam nela (chave = URL do canal).
-- Usuários: o admin cria outros usuários em Conta; cada um tem as próprias listas.
+![React](https://img.shields.io/badge/React-18-61dafb?logo=react&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-5-646cff?logo=vite&logoColor=white)
+![Node](https://img.shields.io/badge/Node-22-339933?logo=node.js&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169e1?logo=postgresql&logoColor=white)
+![ffmpeg](https://img.shields.io/badge/ffmpeg-HLS-007808?logo=ffmpeg&logoColor=white)
+![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-green)
 
-frontend/: React + Vite + Tailwind. backend/: Express + Prisma (PostgreSQL).
-Login inicial: SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD do backend/.env.example.
+</div>
 
-## Conversão no servidor (MKV, AVI, HEVC…)
-Arquivos que o navegador não toca são convertidos na hora pelo ffmpeg (por isso o backend tem `Dockerfile`) para HLS em `/tmp/kesh-convert/<sessão>`:
-H.264 de 8 bits só é reempacotado; o resto vira H.264 (libx264 veryfast, 3 threads). Áudio sempre AAC estéreo.
-Uma conversão por usuário, no máximo 4 ao mesmo tempo (2 com conversão de vídeo). O ffmpeg pausa quando está ~3 min à frente do que está sendo assistido e a sessão acaba após 3 min sem pedidos.
-Avançar além do que já foi convertido reinicia a conversão a partir dali (barra própria abaixo do vídeo).
-As sessões ficam na memória do processo: o app deve rodar com **1 réplica**.
+> O app não vem com canais: você usa a sua própria lista M3U (link ou arquivo).
+
+## Recursos
+
+- **Listas por link ou arquivo** — importação em fluxo, aguenta listas enormes (testado com 364 mil itens / 95 MB em ~45 s e ~190 MB de memória); atualização automática diária; reimportar mantém favoritos e recentes.
+- **Ao vivo, Filmes e Séries** separados automaticamente (pelo link no padrão Xtream ou pelo grupo), com grupos (`group-title`) e busca.
+- **Séries agrupadas** — episódios `S01E02` viram uma série com temporadas, botão *Continuar* e *Próximo episódio*.
+- **Player que se vira sozinho** — HLS (hls.js ou nativo no iPhone), MPEG-TS/FLV (mpegts.js) e MP4; se uma fonte falha, tenta a próxima (link direto → proxy → `.m3u8` do Xtream).
+- **Conversão no servidor** — MKV, AVI, HEVC 10-bit, Opus… viram HLS na hora com ffmpeg (H.264 só é reempacotado, quase sem CPU), com barra própria de avanço.
+- **Proxy seguro** para streams `http://` (bloqueados em páginas HTTPS), servidores sem CORS ou com `User-Agent`/`Referer` próprios (`#EXTVLCOPT`) — links assinados com validade e bloqueio de endereços internos.
+- **Favoritos, recentes, vários usuários** (cada um com as próprias listas) e PWA para a tela de início.
+- **Layout mobile-first** de 320 px a desktop, tema escuro.
+
+## Como funciona
+
+```
+navegador ──► frontend (React + Vite + Tailwind)
+                 │  /api
+                 ▼
+             backend (Express + Prisma) ──► PostgreSQL (listas, canais, favoritos)
+                 │
+                 ├─ /api/stream   proxy dos streams (reescreve playlists HLS)
+                 ├─ /api/logo     proxy das logos (cache 7 dias)
+                 └─ /api/convert  ffmpeg → HLS para formatos que o navegador não toca
+```
+
+## Rodando localmente
+
+Requisitos: Node 22, PostgreSQL e ffmpeg (para a conversão).
+
+```bash
+# backend
+cd backend
+cp .env.example .env          # ajuste DATABASE_URL, JWT_SECRET e a senha do admin
+npm install
+npx prisma migrate deploy
+npm run db:seed               # cria o admin (SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD)
+npm start                     # http://localhost:3000/api/health
+
+# frontend (outro terminal)
+cd frontend
+npm install
+npm run dev
+```
+
+Com Docker, o `backend/Dockerfile` já traz Node + ffmpeg.
+
+## Variáveis do backend
+
+| Variável | Para quê |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL |
+| `JWT_SECRET` | assinatura do login e dos links do proxy |
+| `PUBLIC_PATH` | prefixo quando o app roda num subcaminho (ex.: `/kesh-tv`) |
+| `SEED_ADMIN_*` | admin criado no primeiro start |
+| `NODE_OPTIONS` | limite de memória (padrão `--max-old-space-size=256`) |
+
+## Observações
+
+- A conversão guarda as sessões na memória do processo: rode o backend com **1 réplica**.
+- Limites: 300 MB / 15 min por lista; até 4 conversões simultâneas (2 recodificando vídeo).
+- Use apenas listas e conteúdos que você tem direito de acessar.
+
+## Licença
+
+[MIT](LICENSE)
