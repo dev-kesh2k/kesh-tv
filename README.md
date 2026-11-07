@@ -16,7 +16,7 @@
 
 </div>
 
-> O app não vem com canais: você usa a sua própria lista M3U (link ou arquivo).
+> O app não vem com canais: você usa a sua própria lista M3U (link ou arquivo). Use apenas listas e conteúdos que você tem direito de acessar.
 
 <p align="center">
   <img src="docs/screenshots/desktop-canais.png" width="72%" alt="Canais ao vivo no computador" />
@@ -35,6 +35,24 @@
 
 <sub>Telas com uma lista de demonstração (vídeos de teste livres e imagens genéricas).</sub>
 </details>
+
+## Sumário
+
+- [Recursos](#recursos)
+- [Como funciona](#como-funciona)
+- [Instalação rápida (Docker)](#instalação-rápida-docker)
+- [App Android (celular e Android TV)](#app-android-celular-e-android-tv)
+- [Modo TV e controle remoto](#modo-tv-e-controle-remoto)
+- [iPhone, iPad e Android pelo navegador](#iphone-ipad-e-android-pelo-navegador)
+- [Listas M3U suportadas](#listas-m3u-suportadas)
+- [API](#api)
+- [Segurança](#segurança)
+- [Desenvolvimento](#desenvolvimento)
+- [Configuração](#configuração)
+- [Solução de problemas](#solução-de-problemas)
+- [Como as mudanças entram](#como-as-mudanças-entram)
+- [Contribuindo](#contribuindo)
+- [Licença](#licença)
 
 ## Recursos
 
