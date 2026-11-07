@@ -63,6 +63,7 @@ model Channel {
   referrer   String     @default("")
   position   Int        @default(0)
   seriesName String     @default("")
+  searchName String     @default("")
   season     Int        @default(0)
   episode    Int        @default(0)
   syncId     String     @default("")
