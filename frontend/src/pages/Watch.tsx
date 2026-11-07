@@ -5,6 +5,7 @@ import { api, Channel, KIND_LABEL, seriesLink, Source, toggleFavorite } from '..
 import { ChannelLogo } from '../components/ChannelCard';
 import { Player } from '../components/Player';
 import { Guide } from '../components/Guide';
+import { SleepTimer } from '../components/SleepTimer';
 import { useTitle } from '../useTitle';
 import { btnGhost, ErrorBox, Spinner } from '../components/ui';
 
@@ -193,6 +194,7 @@ export default function Watch() {
                 <button type="button" className={`${btnGhost} ${ch.favorite ? 'text-brand-light' : ''}`} onClick={fav}>
                   <Heart className={`h-4 w-4 ${ch.favorite ? 'fill-brand text-brand' : ''}`} /> {ch.favorite ? 'Favorito' : 'Favoritar'}
                 </button>
+                <SleepTimer programmeEnd={ch.now?.stop} />
                 {canPip && (
                   <button type="button" className={btnGhost} onClick={pip} title="Continuar vendo numa janelinha enquanto usa outros apps">
                     <PictureInPicture2 className="h-4 w-4" /> Mini player
