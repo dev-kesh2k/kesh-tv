@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowDownAZ, EyeOff, ListOrdered, ListVideo, Search, Tv, X } from 'lucide-react';
-import { api, Channel, Group, Kind, KIND_LABEL, Playlist, Series, useApi } from '../api';
+import { api, Channel, Group, groupLabel, Kind, KIND_LABEL, Playlist, Series, useApi } from '../api';
 import { ChannelGrid, SeriesGrid, Shelf, SkeletonGrid } from '../components/ChannelCard';
 import { GuideList } from '../components/GuideList';
 import { Logo, Page } from '../components/Layout';
@@ -12,7 +12,7 @@ import { useAuth } from '../auth';
 const PAGE = 60;
 const ALL = '__all';
 
-function GroupList({ groups, total, current, onPick, onHide }: { groups: Group[]; total: number; current: string; onPick: (g: string) => void; onHide: (g: string) => void }) {
+function GroupList({ groups, total, current, onPick, onHide, kind }: { groups: Group[]; total: number; current: string; onPick: (g: string) => void; onHide: (g: string) => void; kind: Kind }) {
   const [filter, setFilter] = useState('');
   // Ordem A–Z ou a da lista (lembrada neste aparelho).
   const [az, setAz] = useState(() => localStorage.getItem('kesh-tv:grupos-az') === '1');
@@ -69,14 +69,14 @@ function GroupList({ groups, total, current, onPick, onHide }: { groups: Group[]
       )}
       <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto overscroll-contain pr-1">
         {!filter && item(ALL, 'Todos', total)}
-        {shown.map((g) => item(g.name, g.name || 'Sem grupo', g.count))}
+        {shown.map((g) => item(g.name, groupLabel(g.name, kind), g.count))}
       </div>
     </div>
   );
 }
 
 /** Grupos como fileira de botões (toque ou setas do controle), no lugar da lista suspensa. */
-function GroupChips({ groups, total, current, onPick }: { groups: Group[]; total: number; current: string; onPick: (g: string) => void }) {
+function GroupChips({ groups, total, current, onPick, kind }: { groups: Group[]; total: number; current: string; onPick: (g: string) => void; kind: Kind }) {
   const row = useRef<HTMLDivElement>(null);
   // Mantém o grupo escolhido visível (centralizado) na fileira.
   useEffect(() => {
@@ -99,7 +99,7 @@ function GroupChips({ groups, total, current, onPick }: { groups: Group[]; total
   return (
     <div ref={row} className="no-scrollbar -mx-3 mb-4 flex snap-x gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:px-0">
       {chip(ALL, 'Todos', total)}
-      {groups.map((g) => chip(g.name, g.name || 'Sem grupo', g.count))}
+      {groups.map((g) => chip(g.name, groupLabel(g.name, kind), g.count))}
     </div>
   );
 }
@@ -295,14 +295,14 @@ export default function Browse() {
         {!q && (
           <aside className="sticky top-4 hidden h-[calc(100dvh-8rem)] w-64 shrink-0 flex-col lg:flex">
             <p className="mb-2 px-3 text-sm text-slate-500">Grupos</p>
-            <GroupList groups={groups} total={gdata?.total || 0} current={group} onPick={pickGroup} onHide={hideGroup} />
+            <GroupList groups={groups} total={gdata?.total || 0} current={group} onPick={pickGroup} onHide={hideGroup} kind={kind} />
           </aside>
         )}
 
         <section className="min-w-0 flex-1">
           {!q && (
             <div className="lg:hidden">
-              <GroupChips groups={groups} total={gdata?.total || 0} current={group} onPick={pickGroup} />
+              <GroupChips groups={groups} total={gdata?.total || 0} current={group} onPick={pickGroup} kind={kind} />
             </div>
           )}
           {q && <p className="mb-3 text-sm text-slate-400">Resultados para “{q}”</p>}
