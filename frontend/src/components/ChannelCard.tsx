@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Film, Heart, Clapperboard, Tv } from 'lucide-react';
+import { Film, Heart, Clapperboard, Tv, X } from 'lucide-react';
 import { apiUrl, Channel, programmeProgress, Series, seriesLink, toggleFavorite } from '../api';
 
 const KIND_ICON = { live: Tv, movie: Film, series: Clapperboard };
@@ -35,7 +35,7 @@ export function ProgressBar({ value, className = '' }: { value: number; classNam
   );
 }
 
-export function ChannelCard({ channel, onChange }: { channel: Channel; onChange?: (c: Channel) => void }) {
+export function ChannelCard({ channel, onChange, onRemove }: { channel: Channel; onChange?: (c: Channel) => void; onRemove?: (c: Channel) => void }) {
   const [busy, setBusy] = useState(false);
   const fav = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -57,6 +57,19 @@ export function ChannelCard({ channel, onChange }: { channel: Channel; onChange?
         <ChannelLogo channel={channel} className={`w-full ${poster ? 'aspect-[3/4]' : 'aspect-video'}`} />
         {!!channel.progress && <ProgressBar value={channel.progress} className="absolute inset-x-0 bottom-0" />}
         {channel.now && <ProgressBar value={Math.min(0.99, programmeProgress(channel.now))} className="absolute inset-x-0 bottom-0" />}
+        {onRemove && (
+          <button
+            type="button"
+            aria-label={`Tirar ${channel.name} da lista`}
+            onClick={(e) => {
+              e.preventDefault();
+              onRemove(channel);
+            }}
+            className="absolute right-1.5 top-1.5 grid h-9 w-9 place-items-center rounded-full bg-black/60 text-white backdrop-blur hover:bg-black/80"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
       <div className="flex min-h-[52px] items-start gap-1 p-2.5 pr-1">
         <div className="min-w-0 flex-1">
@@ -82,11 +95,11 @@ export function ChannelCard({ channel, onChange }: { channel: Channel; onChange?
   );
 }
 
-export function ChannelGrid({ channels, onChange }: { channels: Channel[]; onChange?: (c: Channel) => void }) {
+export function ChannelGrid({ channels, onChange, onRemove }: { channels: Channel[]; onChange?: (c: Channel) => void; onRemove?: (c: Channel) => void }) {
   return (
     <div className="grid grid-cols-2 gap-2.5 min-[480px]:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 sm:gap-3">
       {channels.map((c) => (
-        <ChannelCard key={c.id} channel={c} onChange={onChange} />
+        <ChannelCard key={c.id} channel={c} onChange={onChange} onRemove={onRemove} />
       ))}
     </div>
   );
