@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, Heart } from 'lucide-react';
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, Heart, PictureInPicture2 } from 'lucide-react';
 import { api, Channel, KIND_LABEL, seriesLink, Source, toggleFavorite } from '../api';
 import { ChannelLogo } from '../components/ChannelCard';
 import { Player } from '../components/Player';
@@ -113,6 +113,21 @@ export default function Watch() {
     }
   };
 
+  // Mini player (Picture-in-Picture): padrão nos navegadores e o modo do Safari no iPhone.
+  type SafariVideo = HTMLVideoElement & { webkitSupportsPresentationMode?: (m: string) => boolean; webkitSetPresentationMode?: (m: string) => void };
+  const canPip = typeof document !== 'undefined' && (document.pictureInPictureEnabled || 'webkitSetPresentationMode' in HTMLVideoElement.prototype);
+  const pip = async () => {
+    const v = document.querySelector('video') as SafariVideo | null;
+    if (!v) return;
+    try {
+      if (document.pictureInPictureElement) await document.exitPictureInPicture();
+      else if (v.requestPictureInPicture) await v.requestPictureInPicture();
+      else v.webkitSetPresentationMode?.('picture-in-picture');
+    } catch {
+      /* vídeo ainda não carregou ou o navegador recusou */
+    }
+  };
+
   const ch = info?.channel;
 
   return (
@@ -178,6 +193,11 @@ export default function Watch() {
                 <button type="button" className={`${btnGhost} ${ch.favorite ? 'text-brand-light' : ''}`} onClick={fav}>
                   <Heart className={`h-4 w-4 ${ch.favorite ? 'fill-brand text-brand' : ''}`} /> {ch.favorite ? 'Favorito' : 'Favoritar'}
                 </button>
+                {canPip && (
+                  <button type="button" className={btnGhost} onClick={pip} title="Continuar vendo numa janelinha enquanto usa outros apps">
+                    <PictureInPicture2 className="h-4 w-4" /> Mini player
+                  </button>
+                )}
                 <button type="button" className={btnGhost} onClick={copy} title="Copiar o link original (para abrir no VLC, por exemplo)">
                   {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />} {copied ? 'Copiado' : 'Copiar link'}
                 </button>
