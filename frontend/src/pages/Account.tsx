@@ -5,6 +5,7 @@ import { useAuth } from '../auth';
 import { Page } from '../components/Layout';
 import { btnDanger, btnGhost, btnPrimary, card, ErrorBox, input, PageTitle } from '../components/ui';
 import { useTitle } from '../useTitle';
+import { platform, setTvMode, tvModeSetting } from '../platform';
 
 function useForm() {
   const [error, setError] = useState('');
@@ -96,6 +97,35 @@ interface StatsData {
   hoursWatched: number;
 }
 
+/** Modo TV: automático (pela TV/app) ou forçado ligado/desligado neste aparelho. */
+function TvModeSection() {
+  const current = tvModeSetting();
+  const opt = (value: 'auto' | 'on' | 'off', label: string) => (
+    <button
+      key={value}
+      type="button"
+      aria-pressed={current === value}
+      onClick={() => setTvMode(value === 'auto' ? null : value === 'on')}
+      className={`min-h-[44px] flex-1 rounded-lg px-3 text-sm font-semibold ${current === value ? 'bg-brand text-white' : 'text-slate-300 hover:bg-ink-700'}`}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <section className={`${card} p-4 sm:p-5`}>
+      <h2 className="font-semibold">Modo TV</h2>
+      <p className="mt-1 text-sm text-slate-400">
+        Letras e botões maiores, navegação pelo controle remoto e margem para as bordas da TV. Neste aparelho: <b className="text-slate-200">{platform.tv ? 'ligado' : 'desligado'}</b>.
+      </p>
+      <div className="mt-3 flex gap-1 rounded-xl bg-ink-850 p-1">
+        {opt('auto', 'Automático')}
+        {opt('on', 'Ligado')}
+        {opt('off', 'Desligado')}
+      </div>
+    </section>
+  );
+}
+
 function Stats() {
   const { data } = useApi<StatsData>('stats');
   if (!data) return null;
@@ -151,6 +181,8 @@ export default function Account() {
       <PageTitle title="Conta" subtitle={user.email} />
       <div className="space-y-4">
         <Stats />
+
+        <TvModeSection />
 
         <form onSubmit={saveName} className={`${card} space-y-3 p-4 sm:p-5`}>
           <h2 className="font-semibold">Perfil</h2>
