@@ -369,7 +369,7 @@ export function Player({
 
   return (
     <div ref={box} className="bg-black sm:bg-transparent">
-    <div className={`relative w-full overflow-hidden bg-black ${fill ? 'h-full' : 'aspect-video sm:rounded-2xl'}`}>
+    <div className={`relative w-full overflow-hidden bg-black ${fill ? 'h-full' : 'aspect-video sm:rounded-[6px]'}`}>
       <video ref={video} className="h-full w-full bg-black" controls={controls} playsInline autoPlay title={title} />
       {!controls && state === 'playing' && paused && (
         <div className="pointer-events-none absolute inset-0 grid place-items-center">
@@ -380,11 +380,11 @@ export function Player({
       )}
       {!controls && hud && state === 'playing' && (conv?.duration || Number.isFinite(video.current?.duration ?? NaN)) && (
         <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center gap-4 bg-gradient-to-b from-black/80 to-transparent px-12 pb-16 pt-10 text-lg text-white">
-          <span className="font-mono">{fmtTime(conv ? shown : now)}</span>
+          <span>{fmtTime(conv ? shown : now)}</span>
           <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/25">
             <div className="h-full bg-brand" style={{ width: `${Math.min(100, ((conv ? shown : now) / ((conv?.duration || video.current?.duration) || 1)) * 100)}%` }} />
           </div>
-          <span className="font-mono text-white/70">{fmtTime(conv?.duration || video.current?.duration || 0)}</span>
+          <span className="text-white/70">{fmtTime(conv?.duration || video.current?.duration || 0)}</span>
         </div>
       )}
       {muted && state === 'playing' && (
@@ -408,7 +408,7 @@ export function Player({
                 'Preparando o arquivo no servidor…'
               ) : (
                 <>
-                  Conectando{sources.length > 1 ? ` · fonte ${Math.min(index + 1, sources.length)} de ${sources.length}` : ''}
+                  Conectando{sources.length > 1 ? `, fonte ${Math.min(index + 1, sources.length)} de ${sources.length}` : ''}
                   {sources[index]?.via === 'proxy' ? ' (pelo servidor)' : ''}
                 </>
               )}
@@ -421,7 +421,8 @@ export function Player({
           <div className="flex max-w-sm flex-col items-center gap-2">
             <AlertTriangle className="h-8 w-8 text-amber-400" />
             <p className="font-semibold">Não foi possível abrir este canal</p>
-            <p className="text-xs text-slate-400">{detail || 'Nenhuma fonte respondeu.'} O canal pode estar fora do ar ou usar um formato que o navegador não toca.</p>
+            <p className="text-sm text-slate-300">O canal pode estar fora do ar no provedor ou usar um formato que este aparelho não toca. Teste o link no VLC com “Copiar link”.</p>
+            {detail && <p className="text-xs text-slate-500">Detalhe técnico: {detail}</p>}
             <button type="button" onClick={retry} className="mt-2 inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-ink-950">
               <RotateCcw className="h-4 w-4" /> Tentar de novo
             </button>
@@ -434,7 +435,7 @@ export function Player({
         <button type="button" aria-label="Voltar 10 segundos" onClick={() => seek(shown - 10)} className="h-10 shrink-0 rounded-lg px-2 text-xs font-semibold text-slate-300 hover:bg-ink-800">
           −10s
         </button>
-        <span className="w-14 shrink-0 text-right font-mono text-xs text-slate-400">{fmtTime(shown)}</span>
+        <span className="w-14 shrink-0 text-right text-xs text-slate-400">{fmtTime(shown)}</span>
         <input
           type="range"
           aria-label="Posição do vídeo"
@@ -452,7 +453,7 @@ export function Player({
           }}
           className="h-10 min-w-0 flex-1 accent-brand"
         />
-        <span className="w-14 shrink-0 font-mono text-xs text-slate-500">{fmtTime(conv.duration)}</span>
+        <span className="w-14 shrink-0 text-xs text-slate-500">{fmtTime(conv.duration)}</span>
         <button type="button" aria-label="Avançar 30 segundos" onClick={() => seek(shown + 30)} className="h-10 shrink-0 rounded-lg px-2 text-xs font-semibold text-slate-300 hover:bg-ink-800">
           +30s
         </button>
