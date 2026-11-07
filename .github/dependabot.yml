@@ -5,6 +5,10 @@ updates:
     schedule:
       interval: monthly
     open-pull-requests-limit: 3
+    # Versões principais (ex.: Prisma 7, Vite 8) quebram compatibilidade: migração feita à mão.
+    ignore:
+      - dependency-name: '*'
+        update-types: [version-update:semver-major]
     groups:
       backend-minor:
         update-types: [minor, patch]
@@ -13,6 +17,10 @@ updates:
     schedule:
       interval: monthly
     open-pull-requests-limit: 3
+    # Versões principais (ex.: Prisma 7, Vite 8) quebram compatibilidade: migração feita à mão.
+    ignore:
+      - dependency-name: '*'
+        update-types: [version-update:semver-major]
     groups:
       frontend-minor:
         update-types: [minor, patch]
