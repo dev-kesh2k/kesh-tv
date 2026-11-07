@@ -38,6 +38,11 @@ public class MainActivity extends Activity {
     s.setJavaScriptEnabled(true);
     s.setDomStorageEnabled(true);
     s.setMediaPlaybackRequiresUserGesture(false);
+    // Respeita o <meta viewport> do site (no modo TV a página usa 1280 px e o WebView amplia até a tela).
+    s.setUseWideViewPort(true);
+    s.setLoadWithOverviewMode(true);
+    // Tamanho de letra do sistema não deforma o layout (o modo TV já escala tudo).
+    s.setTextZoom(100);
     // O site reconhece o app pelo user agent e pela ponte (liga o modo TV sozinho na TV).
     s.setUserAgentString(s.getUserAgentString() + " KeshTV-Android/" + BuildConfig.VERSION_NAME + (isTv() ? " (TV)" : ""));
     web.addJavascriptInterface(new Bridge(), "KeshNative");
