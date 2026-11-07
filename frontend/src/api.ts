@@ -21,7 +21,27 @@ export class ApiError extends Error {
 let onUnauthorized: () => void = () => {};
 export const setUnauthorizedHandler = (fn: () => void) => (onUnauthorized = fn);
 
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Leituras (GET) tentam de novo quando a falha é passageira: sem rede (celular voltando do segundo plano)
+ * ou servidor reiniciando/ocupado (502–504). Sem isso a tela abria vazia até recarregar.
+ */
 async function request<T>(method: string, path: string, body?: unknown, raw = false): Promise<T> {
+  const retries = method === 'GET' ? [700, 2000, 5000] : [];
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await requestOnce<T>(method, path, body, raw);
+    } catch (e) {
+      const status = (e as ApiError).status;
+      const passing = status === 0 || status === 502 || status === 503 || status === 504;
+      if (!passing || attempt >= retries.length) throw e;
+      await wait(retries[attempt]);
+    }
+  }
+}
+
+async function requestOnce<T>(method: string, path: string, body?: unknown, raw = false): Promise<T> {
   const token = getToken();
   let res: Response;
   try {
@@ -81,6 +101,18 @@ export function useApi<T>(path: string | null) {
   useEffect(() => {
     reload();
   }, [reload]);
+
+  // Falhou mesmo assim: tenta de novo quando a internet volta ou o app volta para a frente.
+  useEffect(() => {
+    if (!error) return;
+    const retry = () => document.visibilityState === 'visible' && reload();
+    window.addEventListener('online', retry);
+    document.addEventListener('visibilitychange', retry);
+    return () => {
+      window.removeEventListener('online', retry);
+      document.removeEventListener('visibilitychange', retry);
+    };
+  }, [error, reload]);
 
   return { data, error, loading, reload, setData };
 }
