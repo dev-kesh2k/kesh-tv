@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Film, Heart, Clapperboard, Tv } from 'lucide-react';
-import { apiUrl, Channel, Series, seriesLink, toggleFavorite } from '../api';
+import { apiUrl, Channel, programmeProgress, Series, seriesLink, toggleFavorite } from '../api';
 
 const KIND_ICON = { live: Tv, movie: Film, series: Clapperboard };
 
@@ -56,11 +56,18 @@ export function ChannelCard({ channel, onChange }: { channel: Channel; onChange?
       <div className="relative">
         <ChannelLogo channel={channel} className={`w-full ${poster ? 'aspect-[3/4]' : 'aspect-video'}`} />
         {!!channel.progress && <ProgressBar value={channel.progress} className="absolute inset-x-0 bottom-0" />}
+        {channel.now && <ProgressBar value={Math.min(0.99, programmeProgress(channel.now))} className="absolute inset-x-0 bottom-0" />}
       </div>
       <div className="flex min-h-[52px] items-start gap-1 p-2.5 pr-1">
         <div className="min-w-0 flex-1">
           <p className="line-clamp-2 text-[13px] font-medium leading-snug text-slate-100">{channel.name}</p>
-          {channel.group && <p className="mt-0.5 truncate text-[11px] text-slate-500">{channel.group}</p>}
+          {channel.now ? (
+            <p className="mt-0.5 truncate text-[11px] text-brand-light" title={`Agora: ${channel.now.title}`}>
+              {channel.now.title}
+            </p>
+          ) : (
+            channel.group && <p className="mt-0.5 truncate text-[11px] text-slate-500">{channel.group}</p>
+          )}
         </div>
         <button
           type="button"
