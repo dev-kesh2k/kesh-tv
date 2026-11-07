@@ -40,7 +40,7 @@ function GroupList({ groups, total, current, onPick, onHide }: { groups: Group[]
           onClick={() => onHide(name)}
           aria-label={`Ocultar o grupo ${label}`}
           title="Ocultar este grupo"
-          className="grid h-10 w-9 shrink-0 place-items-center rounded-lg text-slate-600 hover:text-slate-200 lg:opacity-0 lg:group-hover/item:opacity-100"
+          className="grid h-10 w-9 shrink-0 place-items-center rounded-lg text-slate-600 hover:text-slate-200 lg:opacity-0 lg:focus:opacity-100 lg:group-hover/item:opacity-100 lg:group-focus-within/item:opacity-100"
         >
           <EyeOff className="h-4 w-4" />
         </button>
