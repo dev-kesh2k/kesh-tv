@@ -15,6 +15,7 @@ on:
       - '.github/dependabot.yml'
       - '.github/workflows/ci.yml'
       - 'docs/**'
+      - 'deploy/docker/**'
   workflow_dispatch:
 
 env:

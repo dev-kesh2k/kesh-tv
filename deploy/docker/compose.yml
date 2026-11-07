@@ -1,0 +1,48 @@
+# Kesh TV completo (banco + API com ffmpeg + frontend) com um comando:
+#   cp deploy/docker/.env.example deploy/docker/.env   # e troque as senhas
+#   docker compose -f deploy/docker/compose.yml up -d --build
+# Depois abra http://localhost:8080 e entre com SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD.
+name: kesh-tv
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kesh
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no .env}
+      POSTGRES_DB: kesh_tv
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U kesh -d kesh_tv]
+      interval: 5s
+      retries: 20
+
+  api:
+    build: ../../backend
+    restart: unless-stopped
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgresql://kesh:${DB_PASSWORD}@db:5432/kesh_tv
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
+      SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-Administrador}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:?defina SEED_ADMIN_EMAIL no .env}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:?defina SEED_ADMIN_PASSWORD no .env}
+      TZ: ${TZ:-America/Sao_Paulo}
+      NODE_OPTIONS: --max-old-space-size=256
+    # Aplica as migrações e cria o admin (só na primeira vez) antes de subir.
+    command: [sh, -c, "npx prisma migrate deploy && node prisma/seed.js && node src/server.js"]
+
+  web:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/web.Dockerfile
+    restart: unless-stopped
+    depends_on: [api]
+    ports:
+      - "${WEB_PORT:-8080}:80"
+
+volumes:
+  db:
