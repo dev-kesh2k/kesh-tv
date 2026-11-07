@@ -83,3 +83,9 @@ html.is-tv .tv-grid {
   font-weight: 700;
   letter-spacing: -0.005em;
 }
+/* Campos já têm borda e anel próprios no foco: sem o contorno global por cima (evita contorno duplo). */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+}
