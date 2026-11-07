@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export const API = `${import.meta.env.BASE_URL}api/`;
 const TOKEN_KEY = 'kesh-tv:token';
@@ -57,16 +57,24 @@ export function useApi<T>(path: string | null) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(!!path);
 
+  // Só a resposta do pedido mais recente vale: trocando rápido de aba/grupo, uma resposta antiga que chegue
+  // depois não pode sobrescrever a nova (nem atualizar a tela depois de sair dela).
+  const lastReq = useRef(0);
+  useEffect(() => () => void (lastReq.current = -1), []);
+
   const reload = useCallback(async () => {
     if (!path) return;
+    const id = ++lastReq.current;
     setLoading(true);
     try {
-      setData(await api.get<T>(path));
+      const result = await api.get<T>(path);
+      if (id !== lastReq.current) return;
+      setData(result);
       setError('');
     } catch (e) {
-      setError((e as Error).message);
+      if (id === lastReq.current) setError((e as Error).message);
     } finally {
-      setLoading(false);
+      if (id === lastReq.current) setLoading(false);
     }
   }, [path]);
 
