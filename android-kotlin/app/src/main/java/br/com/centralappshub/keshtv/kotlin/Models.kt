@@ -19,6 +19,10 @@ data class Series(val playlistId: String, val name: String, val group: String, v
 data class Episode(val channel: Channel, val season: Int, val episode: Int)
 data class Source(val type: String, val via: String, val url: String)
 data class PlayInfo(val channel: Channel, val sources: List<Source>, val original: String, val resume: Int)
+data class Playlist(
+  val id: String, val name: String, val hasUrl: Boolean, val live: Int, val movies: Int, val series: Int,
+  val status: String, val error: String, val progress: Int, val epgCount: Int,
+)
 data class Page<T>(val items: List<T>, val hasMore: Boolean)
 
 /** Leitura das respostas da API (JSON → modelos). Links relativos (logo?…, stream?…) viram absolutos com `api`. */
@@ -48,5 +52,9 @@ object Parse {
     sources = o.getJSONArray("sources").list { Source(it.str("type"), it.str("via"), abs(api, it.str("url"))) },
     original = o.str("original"), resume = o.optInt("resume", 0),
   )
+  fun playlists(o: JSONObject) = o.getJSONArray("playlists").list {
+    Playlist(it.str("id"), it.str("name"), it.str("url").isNotEmpty(), it.optInt("liveCount"), it.optInt("movieCount"), it.optInt("seriesCount"),
+      it.str("status"), it.str("error"), it.optInt("syncProgress"), it.optInt("epgCount"))
+  }
   fun guide(o: JSONObject) = o.getJSONArray("programmes").list { programme(it)!! }
 }
