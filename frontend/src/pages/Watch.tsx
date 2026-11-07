@@ -75,7 +75,8 @@ export default function Watch() {
   // Setas do teclado / controle remoto trocam de canal.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
+      // Botão/link em destaque: as setas movem o destaque (navegação por controle remoto).
+      if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A'].includes((e.target as HTMLElement)?.tagName)) return;
       if (e.key === 'ArrowUp' || e.key === 'PageUp' || e.key === 'ChannelUp') go(around?.prev || null);
       if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === 'ChannelDown') go(around?.next || null);
     };
