@@ -83,7 +83,7 @@ export default function SeriesPage() {
                   key={s}
                   type="button"
                   onClick={() => setSeason(s)}
-                  className={`min-h-[40px] shrink-0 rounded-full px-4 text-sm font-semibold ${season === s ? 'bg-brand text-white' : 'bg-ink-800 text-slate-300 hover:bg-ink-700'}`}
+                  className={`min-h-[40px] shrink-0 rounded-full px-4 text-sm font-semibold ${season === s ? 'bg-brand text-ink-950' : 'bg-ink-800 text-slate-300 hover:bg-ink-700'}`}
                 >
                   {s ? `Temporada ${s}` : 'Outros'}
                 </button>

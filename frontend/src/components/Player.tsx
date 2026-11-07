@@ -422,7 +422,7 @@ export function Player({
             <AlertTriangle className="h-8 w-8 text-amber-400" />
             <p className="font-semibold">Não foi possível abrir este canal</p>
             <p className="text-xs text-slate-400">{detail || 'Nenhuma fonte respondeu.'} O canal pode estar fora do ar ou usar um formato que o navegador não toca.</p>
-            <button type="button" onClick={retry} className="mt-2 inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-white">
+            <button type="button" onClick={retry} className="mt-2 inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-ink-950">
               <RotateCcw className="h-4 w-4" /> Tentar de novo
             </button>
           </div>

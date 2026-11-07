@@ -7,8 +7,8 @@
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#07090d",
-  "theme_color": "#07090d",
+  "background_color": "#0F1724",
+  "theme_color": "#0F1724",
   "lang": "pt-BR",
   "categories": ["entertainment", "video"],
   "icons": [

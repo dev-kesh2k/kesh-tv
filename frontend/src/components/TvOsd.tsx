@@ -28,7 +28,7 @@ export function TvOsd({ channel }: { channel?: Channel }) {
         <ChannelLogo channel={channel} className="h-24 w-40 shrink-0 rounded-2xl" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-3">
-            {live && <span className="rounded-md bg-red-600 px-2 py-0.5 text-sm font-bold tracking-wider text-white">AO VIVO</span>}
+            {live && <span className="rounded-md bg-tally px-2 py-0.5 text-sm font-bold tracking-wider text-white">AO VIVO</span>}
             <span className="truncate text-lg text-slate-300">{channel.group}</span>
           </div>
           <h1 className="mt-1 truncate text-4xl font-bold text-white">{channel.name}</h1>
