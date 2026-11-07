@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,34 +21,35 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-/** Favoritos e "continuar assistindo" (histórico) numa lista só. */
+/** Lista de canais vinda da API (Favoritos ou Recentes). */
 @Composable
-fun FavoritesScreen(api: Api, onOpen: (Channel) -> Unit, onBack: () -> Unit) {
-  var favorites by remember { mutableStateOf<List<Channel>?>(null) }
-  var history by remember { mutableStateOf<List<Channel>>(emptyList()) }
+fun ChannelListScreen(title: String, empty: String, load: suspend () -> List<Channel>, onOpen: (Channel) -> Unit) {
+  var list by remember { mutableStateOf<List<Channel>?>(null) }
   var error by remember { mutableStateOf("") }
-
   LaunchedEffect(Unit) {
-    try {
-      favorites = api.favorites()
-      history = runCatching { api.history() }.getOrDefault(emptyList())
-    } catch (e: ApiError) { error = e.message ?: "Erro" }
+    try { list = load() } catch (e: ApiError) { error = e.message ?: "Erro" }
   }
-
   Column(Modifier.fillMaxSize()) {
-    ScreenHeader("Favoritos", onBack)
-    val favs = favorites
+    Text(title, style = MaterialTheme.typography.headlineSmall, fontFamily = Condensed, modifier = Modifier.padding(20.dp, 16.dp, 20.dp, 8.dp))
+    val items = list
     when {
-      error.isNotEmpty() -> Text(error, Modifier.padding(16.dp))
-      favs == null -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator(color = Kesh.Signal) }
-      favs.isEmpty() && history.isEmpty() -> Text("Nada por aqui ainda. Toque no coração de um canal para guardá-lo.", Modifier.padding(16.dp))
+      error.isNotEmpty() -> Text(error, color = Kesh.Tally, modifier = Modifier.padding(20.dp))
+      items == null -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator(color = Kesh.Signal) }
+      items.isEmpty() -> Text(empty, style = MaterialTheme.typography.bodyMedium, color = Kesh.Fog, modifier = Modifier.padding(20.dp))
       else -> LazyColumn(contentPadding = PaddingValues(horizontal = 8.dp)) {
-        items(favs, key = { "f" + it.id }) { c -> GuideRow(c) { onOpen(c) } }
-        if (history.isNotEmpty()) {
-          item { Text("Vistos por último", style = MaterialTheme.typography.titleMedium, fontFamily = Condensed, color = Kesh.Signal, modifier = Modifier.padding(12.dp, 20.dp, 12.dp, 4.dp)) }
-          items(history.take(20), key = { "h" + it.id }) { c -> GuideRow(c) { onOpen(c) } }
+        items(items, key = { it.id }) { c ->
+          GuideRow(c) { onOpen(c) }
+          HorizontalDivider(color = Kesh.Line)
         }
       }
     }
   }
 }
+
+@Composable
+fun FavoritesScreen(api: Api, onOpen: (Channel) -> Unit) =
+  ChannelListScreen("Favoritos", "Nada por aqui ainda. Marque o coração de um canal no player para guardá-lo.", { api.favorites() }, onOpen)
+
+@Composable
+fun RecentScreen(api: Api, onOpen: (Channel) -> Unit) =
+  ChannelListScreen("Recentes", "Nenhum canal assistido ainda.", { api.history() }, onOpen)
