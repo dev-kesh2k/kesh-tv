@@ -36,8 +36,13 @@ model Playlist {
   syncedAt     DateTime?
   syncStarted  DateTime?
   syncProgress Int       @default(0)
+  epgUrl       String?
+  epgCount     Int       @default(0)
+  epgError     String?
+  epgSyncedAt  DateTime?
   createdAt    DateTime  @default(now())
   channels     Channel[]
+  programmes   Programme[]
 
   @@index([userId])
 }
@@ -88,4 +93,18 @@ model History {
 
   @@id([userId, channelId])
   @@index([userId, watchedAt])
+}
+
+model Programme {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  playlistId String   @db.Uuid
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  channel    String
+  start      DateTime
+  stop       DateTime
+  title      String
+  desc       String   @default("")
+  syncId     String   @default("")
+
+  @@index([playlistId, channel, stop])
 }

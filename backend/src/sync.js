@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import { prisma, HttpError } from './db.js';
 import { createParser } from './m3u.js';
 import { safeFetch } from './net.js';
+import { EPG_REFRESH_MS, epgUrlFor, syncEpg } from './epg.js';
 
 const MAX_BYTES = 300 * 1024 * 1024;
 const MAX_ITEMS = 1_000_000;
@@ -69,7 +70,7 @@ async function insertBatch(playlistId, items, syncId) {
       "seriesName"=EXCLUDED."seriesName","season"=EXCLUDED."season","episode"=EXCLUDED."episode","syncId"=EXCLUDED."syncId"`;
 }
 
-/** Lê e grava a lista; só apaga os canais que sumiram se a leitura terminou inteira. */
+/** Lê e grava a lista; só apaga os canais que sumiram se a leitura terminou inteira. Devolve contagens e o cabeçalho #EXTM3U. */
 async function importLines(playlistId, lines) {
   const syncId = crypto.randomUUID();
   const parser = createParser({ dedupe: false });
@@ -103,7 +104,7 @@ async function importLines(playlistId, lines) {
            COUNT(DISTINCT COALESCE(NULLIF("seriesName", ''), "name")) FILTER (WHERE "kind" = 'series')::int AS series
     FROM "Channel" WHERE "playlistId" = ${playlistId}::uuid`;
   // seriesCount = número de séries (não de episódios); channelCount = todos os itens.
-  return { channelCount: c.total, liveCount: c.live, movieCount: c.movie, seriesCount: c.series };
+  return { counts: { channelCount: c.total, liveCount: c.live, movieCount: c.movie, seriesCount: c.series }, header: parser.header };
 }
 
 /**
@@ -123,8 +124,12 @@ export async function startSync(playlistId, source) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(new Error('timeout')), TOTAL_TIMEOUT);
     try {
-      const counts = await importLines(playlistId, linesOf(source ?? download(pl.url, ctrl)));
-      return await prisma.playlist.update({ where: { id: playlistId }, data: { ...counts, status: 'ok', error: null, syncedAt: new Date(), syncStarted: null } });
+      const { counts, header } = await importLines(playlistId, linesOf(source ?? download(pl.url, ctrl)));
+      const epgUrl = epgUrlFor(pl.url, header);
+      const saved = await prisma.playlist.update({ where: { id: playlistId }, data: { ...counts, epgUrl, status: 'ok', error: null, syncedAt: new Date(), syncStarted: null } });
+      // Guia de programação em segundo plano (não segura a lista).
+      if (epgUrl) syncEpg(playlistId).catch(() => {});
+      return saved;
     } catch (err) {
       let message = err instanceof HttpError ? err.message : 'Falha ao ler a lista';
       if (ctrl.signal.aborted) message = ctrl.signal.reason?.message === 'idle' ? 'O servidor da lista parou de enviar dados' : 'O download da lista passou de 15 minutos';
@@ -148,6 +153,12 @@ export function startAutoRefresh() {
         select: { id: true },
       });
       for (const p of due) await startSync(p.id).then((r) => r.done).catch((e) => console.warn('auto-refresh', p.id, e.message));
+      // Guia de programação: a cada 6 h (as listas em si só 1×/dia).
+      const epgDue = await prisma.playlist.findMany({
+        where: { epgUrl: { not: null }, status: 'ok', OR: [{ epgSyncedAt: null }, { epgSyncedAt: { lt: new Date(Date.now() - EPG_REFRESH_MS) } }] },
+        select: { id: true },
+      });
+      for (const p of epgDue) await syncEpg(p.id);
     } catch (err) {
       console.warn('auto-refresh', err.message);
     }
