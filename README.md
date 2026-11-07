@@ -78,6 +78,10 @@ Com Docker, o `backend/Dockerfile` já traz Node + ffmpeg.
 - Limites: 300 MB / 15 min por lista; até 4 conversões simultâneas (2 recodificando vídeo).
 - Use apenas listas e conteúdos que você tem direito de acessar.
 
+## Como as mudanças entram
+
+Toda mudança entra por **pull request** na `main` (o Central Apps Hub abre e mescla o PR); o GitHub Actions publica em produção quando o PR entra na `main`.
+
 ## Licença
 
 [MIT](LICENSE)
