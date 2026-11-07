@@ -46,12 +46,11 @@ export function Favorites() {
     try {
       const json = JSON.parse(await file.text());
       const r = await api.post<ImportResult>('favorites/import', json);
-      setMsg(
-        `${r.imported} adicionado(s)` +
-          (r.already ? `, ${r.already} já estava(m) nos favoritos` : '') +
-          (r.notFound ? `, ${r.notFound} não encontrado(s) nas suas listas${r.missing.length ? ` (ex.: ${r.missing.slice(0, 3).join(', ')})` : ''}` : '') +
-          '.',
-      );
+      const n = (v: number, um: string, varios: string) => `${v} ${v === 1 ? um : varios}`;
+      const parts = [n(r.imported, 'favorito adicionado', 'favoritos adicionados')];
+      if (r.already) parts.push(n(r.already, 'já estava na lista', 'já estavam na lista'));
+      if (r.notFound) parts.push(`${n(r.notFound, 'não achado', 'não achados')} nas suas listas${r.missing.length ? ` (por exemplo ${r.missing.slice(0, 3).join(', ')})` : ''}`);
+      setMsg(parts.join('; ') + '.');
       reload();
     } catch (e) {
       setIoError(e instanceof SyntaxError ? 'O arquivo não é um JSON válido.' : (e as Error).message);
@@ -64,7 +63,7 @@ export function Favorites() {
     <Page wide>
       <PageTitle
         title="Favoritos"
-        subtitle={list.length ? `${list.length} canal(is)` : undefined}
+        subtitle={list.length ? `${list.length} ${list.length === 1 ? 'item' : 'itens'}` : undefined}
         action={
           <div className="flex flex-wrap gap-2">
             {list.length > 0 && (
