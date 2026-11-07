@@ -17,6 +17,9 @@ on:
       - 'docs/**'
       - 'deploy/docker/**'
       - 'android/**'
+      - 'android-kotlin/**'
+      - 'flutter/**'
+      - 'scripts/build-apk.sh'
       - '.github/workflows/android.yml'
   workflow_dispatch:
 
