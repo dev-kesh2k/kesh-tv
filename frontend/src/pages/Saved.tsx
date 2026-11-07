@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Download, Heart, History, Trash2, Upload } from 'lucide-react';
 import { api, API, Channel, getToken, useApi } from '../api';
 import { ChannelGrid } from '../components/ChannelCard';
+import { useTitle } from '../useTitle';
 import { Page } from '../components/Layout';
 import { btnGhost, Empty, ErrorBox, PageTitle, Spinner } from '../components/ui';
 
@@ -16,6 +17,7 @@ export function Favorites() {
   const { data, error, loading, setData, reload } = useApi<{ channels: Channel[] }>('favorites');
   const list = data?.channels || [];
   const fileRef = useRef<HTMLInputElement>(null);
+  useTitle('Favoritos');
   const [msg, setMsg] = useState('');
   const [ioError, setIoError] = useState('');
   // Desfavoritar aqui tira o canal da lista.
@@ -94,6 +96,7 @@ export function Favorites() {
 
 export function Recent() {
   const { data, error, loading, setData } = useApi<{ channels: Channel[] }>('history');
+  useTitle('Recentes');
   const list = data?.channels || [];
   const update = (c: Channel) => setData({ channels: list.map((x) => (x.id === c.id ? c : x)) });
   const clear = async () => {

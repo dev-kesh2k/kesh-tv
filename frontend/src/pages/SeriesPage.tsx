@@ -5,6 +5,7 @@ import { Channel, Episode, useApi } from '../api';
 import { ChannelLogo, ProgressBar } from '../components/ChannelCard';
 import { Page } from '../components/Layout';
 import { btnPrimary, ErrorBox, Spinner } from '../components/ui';
+import { useTitle } from '../useTitle';
 
 interface SeriesData {
   name: string;
@@ -27,6 +28,7 @@ export default function SeriesPage() {
   const { playlistId = '' } = useParams();
   const [params] = useSearchParams();
   const name = params.get('nome') || '';
+  useTitle(name);
   const nav = useNavigate();
   const { data, error, loading } = useApi<SeriesData>(`series/episodes?playlist=${playlistId}&name=${encodeURIComponent(name)}`);
   const { data: hist } = useApi<{ channels: Channel[] }>('history');

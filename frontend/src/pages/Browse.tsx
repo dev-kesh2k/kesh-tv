@@ -5,6 +5,7 @@ import { api, Channel, Group, Kind, KIND_LABEL, Playlist, Series, useApi } from 
 import { ChannelGrid, SeriesGrid } from '../components/ChannelCard';
 import { Logo, Page } from '../components/Layout';
 import { btnPrimary, Empty, ErrorBox, input, Spinner } from '../components/ui';
+import { useTitle } from '../useTitle';
 
 const PAGE = 60;
 const ALL = '__all';
@@ -49,6 +50,7 @@ export default function Browse() {
   const q = params.get('q') || '';
   const [search, setSearch] = useState(q);
   const [sheet, setSheet] = useState(false);
+  useTitle(q ? `Busca: ${q}` : group !== ALL ? `${group || 'Sem grupo'} · ${KIND_LABEL[kind]}` : KIND_LABEL[kind]);
 
   const { data: pls, loading: plLoading } = useApi<{ playlists: Playlist[] }>('playlists');
   const playlists = pls?.playlists || [];
