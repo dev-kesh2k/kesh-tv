@@ -11,6 +11,15 @@ const PASS_HEADERS = ['content-type', 'content-length', 'content-range', 'accept
 export const streamLink = (url, ua = '', ref = '') => `stream?${sign(url, { ua, ref, ttlSec: STREAM_TTL })}`;
 export const logoLink = (url) => (url && /^https?:\/\//i.test(url) ? `logo?${sign(url)}` : '');
 
+// Conteúdo de terceiros servido pelo domínio do app: nunca pode rodar script aqui (SVG com <script>, HTML…).
+export const SANDBOX_HEADERS = {
+  'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+  'X-Content-Type-Options': 'nosniff',
+};
+const ACTIVE_TYPE = /html|javascript|ecmascript|xml(?!.*mpegurl)|svg/i;
+/** Tipo repassado da fonte, trocado por binário quando o navegador o executaria. */
+export const safeType = (ct) => (!ct || (ACTIVE_TYPE.test(ct) && !/^image\/svg/i.test(ct)) ? 'application/octet-stream' : ct);
+
 const isPlaylist = (ct, url) => /mpegurl/i.test(ct) || /\.m3u8?(\?|$)/i.test(url);
 
 /** Reescreve as URLs de uma playlist HLS para passarem pelo proxy (segmentos, sub-playlists, chaves). */
@@ -40,6 +49,7 @@ const REDIRECT_TTL = 5 * 60_000;
 
 export async function proxyStream(req, res) {
   const { url, ua, ref } = verify(req.query);
+  res.set(SANDBOX_HEADERS);
   const ctrl = new AbortController();
   req.on('close', () => ctrl.abort());
   const headers = req.headers.range ? { Range: req.headers.range } : {};
@@ -74,13 +84,13 @@ export async function proxyStream(req, res) {
       res.set({ 'Content-Type': 'application/vnd.apple.mpegurl', 'Cache-Control': 'no-cache' });
       return res.send(rewriteHls(text, finalUrl, ua, ref));
     }
-    res.set('Content-Type', ct || 'application/octet-stream');
+    res.set('Content-Type', safeType(ct));
     return res.send(text);
   }
   res.status(up.status);
   for (const h of PASS_HEADERS) {
     const v = up.headers.get(h);
-    if (v) res.set(h, v);
+    if (v) res.set(h, h === 'content-type' ? safeType(v) : v);
   }
   res.set({ 'Cache-Control': 'no-store', 'X-Accel-Buffering': 'no' });
   if (!up.body) return res.end();
@@ -92,6 +102,7 @@ export async function proxyStream(req, res) {
 
 export async function proxyLogo(req, res) {
   const { url } = verify(req.query);
+  res.set(SANDBOX_HEADERS);
   try {
     const { res: up } = await safeFetch(url, { timeoutMs: 8000, ua: BROWSER_UA, headers: { Accept: 'image/*' } });
     const ct = up.headers.get('content-type') || '';
