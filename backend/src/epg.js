@@ -88,6 +88,19 @@ export async function syncEpg(playlistId) {
   }
 }
 
+/**
+ * Remove programas sobrepostos (guias de provedores repetem o canal com horários diferentes):
+ * mantém a sequência a partir do primeiro, com 1 min de tolerância.
+ */
+export function dropOverlaps(list) {
+  const out = [];
+  for (const p of list) {
+    const last = out[out.length - 1];
+    if (!last || new Date(p.start).getTime() >= new Date(last.stop).getTime() - 60_000) out.push(p);
+  }
+  return out;
+}
+
 /** Agora e a seguir para vários canais de uma vez: Map "playlistId|tvg-id" → { now, next }. */
 export async function nowNext(rows) {
   const live = rows.filter((r) => r.kind === 'live' && r.tvgId);
@@ -104,24 +117,33 @@ export async function nowNext(rows) {
     orderBy: { start: 'asc' },
     select: { playlistId: true, channel: true, start: true, stop: true, title: true },
   });
+  const byChannel = new Map();
   for (const p of progs) {
     const key = `${p.playlistId}|${p.channel}`;
-    const cur = out.get(key) || {};
-    const item = { title: p.title, start: p.start, stop: p.stop };
-    if (p.start <= now && !cur.now) cur.now = item;
-    else if (p.start > now && !cur.next) cur.next = item;
+    if (!byChannel.has(key)) byChannel.set(key, []);
+    byChannel.get(key).push(p);
+  }
+  for (const [key, list] of byChannel) {
+    const clean = dropOverlaps(list);
+    const cur = {};
+    for (const p of clean) {
+      const item = { title: p.title, start: p.start, stop: p.stop };
+      if (p.start <= now && !cur.now) cur.now = item;
+      else if (p.start > now && !cur.next) cur.next = item;
+    }
     out.set(key, cur);
   }
   return out;
 }
 
 /** Programação de um canal: o atual e os próximos. */
-export function channelGuide(ch, limit = 24) {
-  if (ch.kind !== 'live' || !ch.tvgId) return Promise.resolve([]);
-  return prisma.programme.findMany({
+export async function channelGuide(ch, limit = 24) {
+  if (ch.kind !== 'live' || !ch.tvgId) return [];
+  const list = await prisma.programme.findMany({
     where: { playlistId: ch.playlistId, channel: ch.tvgId.toLowerCase(), stop: { gt: new Date() } },
     orderBy: { start: 'asc' },
-    take: limit,
+    take: limit * 2,
     select: { start: true, stop: true, title: true, desc: true },
   });
+  return dropOverlaps(list).slice(0, limit);
 }
