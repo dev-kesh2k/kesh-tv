@@ -86,7 +86,18 @@ export function parseHeader(buf) {
       duration = (raw * scale) / 1e9;
     }
     const vcodec = /AVC/.test(v[0]) ? 'h264' : /HEVC/.test(v[0]) ? 'hevc' : v[0].toLowerCase();
-    return { vcodec, pix: '', duration, hasAudio: /A_[A-Z]/.test(ascii), linear: true };
+    // H.264 de 10 bits (Hi10P, comum em anime) ou 4:2:2/4:4:4: navegador não decodifica → precisa converter.
+    // O perfil está no CodecPrivate (0x63A2, AVCDecoderConfigurationRecord: byte 1 = profile_idc).
+    let pix = '';
+    if (vcodec === 'h264') {
+      const cp = buf.indexOf(Buffer.from([0x63, 0xa2]), ascii.indexOf(v[0]));
+      if (cp >= 0) {
+        const lenBytes = 8 - Math.floor(Math.log2(buf[cp + 2] || 1)); // tamanho do número (EBML vint)
+        const profile = buf[cp + 2 + lenBytes + 1];
+        if ([110, 122, 244].includes(profile)) pix = 'yuv420p10le';
+      }
+    }
+    return { vcodec, pix, duration, hasAudio: /A_[A-Z]/.test(ascii), linear: true };
   }
   if (ascii.startsWith('RIFF') && ascii.slice(8, 12) === 'AVI ') {
     const avih = ascii.indexOf('avih');
