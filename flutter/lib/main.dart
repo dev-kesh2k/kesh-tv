@@ -5,6 +5,7 @@ import 'api.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
 import 'player_screen.dart';
+import 'screens.dart';
 import 'store.dart';
 import 'theme.dart';
 
@@ -40,9 +41,9 @@ class _KeshAppState extends State<KeshApp> {
               return HomeScreen(
                 api: api,
                 onOpen: (c) => push(PlayerScreen(api: api, id: c.id)),
-                onSeries: (s) => push(Scaffold(body: Center(child: Text(s.name)))),
-                onFavorites: () {},
-                onAccount: _logout,
+                onSeries: (s) => push(SeriesScreen(api: api, series: s, onOpen: (c) => push(PlayerScreen(api: api, id: c.id)))),
+                onFavorites: () => push(FavoritesScreen(api: api, onOpen: (c) => push(PlayerScreen(api: api, id: c.id)))),
+                onAccount: () => push(AccountScreen(api: api, store: store, onLogout: _logout)),
                 onUnauthorized: _logout,
               );
             })
