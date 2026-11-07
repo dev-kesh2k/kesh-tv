@@ -40,44 +40,47 @@ export function Layout() {
     if (platform.tv && !pathname.includes('/assistir/')) focusFirstContent();
   }, [pathname, search]);
   return (
-    <div className="min-h-[100dvh] lg:flex">
-      <aside className="tv-sidebar sticky top-0 hidden h-[100dvh] w-56 shrink-0 flex-col border-r border-ink-800 bg-ink-950 px-3 py-6 lg:flex">
-        <div className="mb-8 px-3">
-          <Logo />
-        </div>
-        <nav className="flex flex-col gap-1">
-          {NAV.map(({ to, label, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                `group flex min-h-[44px] items-center gap-3 rounded-lg px-3 text-[0.95rem] transition-colors ${
-                  isActive ? 'bg-ink-800 font-semibold text-slate-100' : 'text-slate-400 hover:bg-ink-900 hover:text-slate-100'
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <Icon className={`h-5 w-5 shrink-0 ${isActive ? 'text-brand' : 'text-slate-500 group-hover:text-slate-300'}`} />
-                  {label}
-                </>
-              )}
+    <div className="min-h-[100dvh]">
+      {/* Computador e TV: menu numa barra no topo. Celular: barra de abas embaixo. */}
+      <header className="tv-topbar sticky top-0 z-30 hidden border-b border-ink-800 bg-ink-950/95 backdrop-blur lg:block">
+        <div className="mx-auto flex h-16 max-w-[1600px] items-center gap-10 px-8">
+          <NavLink to="/" aria-label="Kesh TV — início" className="shrink-0">
+            <Logo />
+          </NavLink>
+          <nav className="flex h-full items-stretch gap-1">
+            {NAV.map(({ to, label, icon: Icon, end }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                className={({ isActive }) =>
+                  `group -mb-px flex items-center gap-2 border-b-[3px] px-3 text-[0.95rem] transition-colors ${
+                    isActive ? 'border-brand font-semibold text-slate-100' : 'border-transparent text-slate-400 hover:text-slate-100'
+                  }`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <Icon className={`h-[18px] w-[18px] shrink-0 ${isActive ? 'text-brand' : 'text-slate-500 group-hover:text-slate-300'}`} />
+                    {label}
+                  </>
+                )}
+              </NavLink>
+            ))}
+          </nav>
+          {user && (
+            <NavLink to="/conta" title={user.email} className="ml-auto flex min-w-0 items-center gap-3 rounded-lg px-2 py-1 hover:bg-ink-900">
+              <span className="min-w-0 text-right text-sm leading-tight">
+                <span className="block truncate text-slate-200">{user.name || 'Conta'}</span>
+                <span className="block truncate text-xs text-slate-500">{user.email}</span>
+              </span>
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-ink-800 text-xs font-semibold text-slate-300">{initials(user.name || user.email)}</span>
             </NavLink>
-          ))}
-        </nav>
-        {user && (
-          <div className="mt-auto flex items-center gap-3 border-t border-ink-800 px-3 pt-4">
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ink-800 text-xs font-semibold text-slate-300">{initials(user.name || user.email)}</span>
-            <div className="min-w-0 text-sm">
-              <p className="truncate text-slate-200">{user.name || 'Conta'}</p>
-              <p className="truncate text-xs text-slate-500">{user.email}</p>
-            </div>
-          </div>
-        )}
-      </aside>
+          )}
+        </div>
+      </header>
 
-      <div className="min-w-0 flex-1 pb-[calc(64px+env(safe-area-inset-bottom))] lg:pb-0">
+      <div className="min-w-0 pb-[calc(64px+env(safe-area-inset-bottom))] lg:pb-0">
         <ErrorBoundary>
           <Outlet />
         </ErrorBoundary>
