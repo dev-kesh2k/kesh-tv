@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowDownAZ, ChevronDown, EyeOff, Layers, ListOrdered, ListVideo, Search, Tv, X } from 'lucide-react';
+import { ArrowDownAZ, EyeOff, ListOrdered, ListVideo, Search, Tv, X } from 'lucide-react';
 import { api, Channel, Group, Kind, KIND_LABEL, Playlist, Series, useApi } from '../api';
 import { ChannelGrid, SeriesGrid, Shelf, SkeletonGrid } from '../components/ChannelCard';
 import { Logo, Page } from '../components/Layout';
@@ -74,13 +74,41 @@ function GroupList({ groups, total, current, onPick, onHide }: { groups: Group[]
   );
 }
 
+/** Grupos como fileira de botões (toque ou setas do controle), no lugar da lista suspensa. */
+function GroupChips({ groups, total, current, onPick }: { groups: Group[]; total: number; current: string; onPick: (g: string) => void }) {
+  const row = useRef<HTMLDivElement>(null);
+  // Mantém o grupo escolhido visível (centralizado) na fileira.
+  useEffect(() => {
+    row.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest' });
+  }, [current, groups.length]);
+  const chip = (name: string, label: string, count: number) => (
+    <button
+      key={name}
+      type="button"
+      aria-pressed={current === name}
+      onClick={() => onPick(name)}
+      className={`flex min-h-[44px] shrink-0 snap-start items-center gap-1.5 rounded-xl border px-3.5 text-sm transition ${
+        current === name ? 'border-brand bg-brand/15 font-semibold text-brand-light' : 'border-ink-700 bg-ink-900 text-slate-300 hover:bg-ink-800'
+      }`}
+    >
+      <span className="max-w-[14rem] truncate">{label}</span>
+      <span className="text-xs text-slate-500">{count.toLocaleString('pt-BR')}</span>
+    </button>
+  );
+  return (
+    <div ref={row} className="no-scrollbar -mx-3 mb-4 flex snap-x gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:px-0">
+      {chip(ALL, 'Todos', total)}
+      {groups.map((g) => chip(g.name, g.name || 'Sem grupo', g.count))}
+    </div>
+  );
+}
+
 export default function Browse() {
   const [params, setParams] = useSearchParams();
   const kind = (['live', 'movie', 'series'].includes(params.get('tipo') || '') ? params.get('tipo') : 'live') as Kind;
   const group = params.get('grupo') ?? ALL;
   const q = params.get('q') || '';
   const [search, setSearch] = useState(q);
-  const [sheet, setSheet] = useState(false);
   const { user, setUser } = useAuth();
   const hideGroup = async (g: string) => {
     if (!user || !confirm(`Ocultar o grupo "${g || 'Sem grupo'}"? Ele some dos canais e da busca; dá para mostrar de novo em Conta.`)) return;
@@ -201,7 +229,6 @@ export default function Browse() {
   const update = (c: Channel) => setChannels((list) => list.map((x) => (x.id === c.id ? c : x)));
   const pickGroup = (g: string) => {
     set({ grupo: g === ALL ? null : g });
-    setSheet(false);
     window.scrollTo({ top: 0 });
   };
 
@@ -228,7 +255,6 @@ export default function Browse() {
     kind === 'live'
       ? (favs?.channels || []).filter((c) => c.kind === 'live')
       : (hist?.channels || []).filter((c) => c.kind === kind && (c.progress || 0) > 0 && (c.progress || 0) < 1);
-  const groupLabel = group === ALL ? 'Todos os grupos' : group || 'Sem grupo';
 
   return (
     <Page wide>
@@ -272,11 +298,9 @@ export default function Browse() {
 
         <section className="min-w-0 flex-1">
           {!q && (
-            <button type="button" onClick={() => setSheet(true)} className="mb-3 flex min-h-[44px] w-full items-center gap-2 rounded-xl border border-ink-700 bg-ink-900 px-3.5 text-left text-sm lg:hidden">
-              <Layers className="h-4 w-4 shrink-0 text-slate-500" />
-              <span className="min-w-0 flex-1 truncate">{groupLabel}</span>
-              <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" />
-            </button>
+            <div className="lg:hidden">
+              <GroupChips groups={groups} total={gdata?.total || 0} current={group} onPick={pickGroup} />
+            </div>
           )}
           {q && <p className="mb-3 text-sm text-slate-400">Resultados para “{q}”</p>}
           {showShelf && <Shelf title={kind === 'live' ? 'Seus favoritos' : 'Continuar assistindo'} channels={shelf.slice(0, 20)} />}
@@ -299,17 +323,6 @@ export default function Browse() {
         </section>
       </div>
 
-      {sheet && (
-        <div className="fixed inset-0 z-40 flex flex-col bg-ink-950 px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] lg:hidden">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-bold">Grupos · {KIND_LABEL[kind]}</h2>
-            <button type="button" aria-label="Fechar" onClick={() => setSheet(false)} className="grid h-11 w-11 place-items-center rounded-full bg-ink-800">
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-          <GroupList groups={groups} total={gdata?.total || 0} current={group} onPick={pickGroup} onHide={hideGroup} />
-        </div>
-      )}
     </Page>
   );
 }
