@@ -80,3 +80,21 @@ export function installSpatialNav() {
     target.scrollIntoView({ block: dir === 'up' || dir === 'down' ? 'center' : 'nearest', inline: 'nearest', behavior: 'smooth' });
   });
 }
+
+/**
+ * Modo TV: ao abrir uma tela, coloca o destaque no primeiro item do conteúdo (cartão, botão),
+ * pulando campos de texto — para o controle remoto funcionar de cara.
+ */
+export function focusFirstContent(delay = 400) {
+  window.setTimeout(() => {
+    const active = document.activeElement as HTMLElement | null;
+    if (active && active !== document.body) return;
+    const main = document.querySelector('main');
+    if (!main) return;
+    const first =
+      main.querySelector<HTMLElement>('[data-tv-start]') ||
+      [...main.querySelectorAll<HTMLElement>('a[href*="/assistir/"], a[href*="/serie/"]')].find(visible) ||
+      [...main.querySelectorAll<HTMLElement>(FOCUSABLE)].find((el) => el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA' && visible(el));
+    first?.focus({ preventScroll: true });
+  }, delay);
+}
