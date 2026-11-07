@@ -230,7 +230,7 @@ export default function Watch() {
 
         {around && around.channels.length > 1 && (
           <aside className="mt-5 px-3 sm:px-0 xl:mt-0 xl:w-80 xl:shrink-0">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">{around.series ? 'Episódios' : `Mais em ${ch?.group || 'este grupo'}`}</p>
+            <h2 className="font-display mb-2 text-lg text-slate-300">{around.series ? 'Episódios' : ch?.group || 'Neste grupo'}</h2>
             <div ref={listRef} className="space-y-1 xl:max-h-[calc(100dvh-6rem)] xl:overflow-y-auto xl:pr-1">
               {around.channels.map((c) => (
                 <Link
@@ -238,10 +238,11 @@ export default function Watch() {
                   to={`/assistir/${c.id}`}
                   replace
                   data-current={c.id === id ? '1' : undefined}
-                  className={`flex min-h-[52px] items-center gap-3 rounded-xl p-1.5 pr-3 transition ${c.id === id ? 'bg-brand/15 ring-1 ring-brand/40' : 'hover:bg-ink-800'}`}
+                  className={`flex min-h-[52px] items-center gap-3 border-l-[3px] py-1.5 pl-2 pr-3 transition-colors ${c.id === id ? 'border-brand bg-ink-900' : 'border-transparent hover:bg-ink-900'}`}
                 >
-                  <ChannelLogo channel={c} className="h-10 w-14 shrink-0 rounded-lg !p-1.5" />
-                  <span className={`min-w-0 flex-1 truncate text-sm ${c.id === id ? 'font-semibold text-brand-light' : 'text-slate-200'}`}>{c.name}</span>
+                  <span className="w-8 shrink-0 text-right text-sm text-slate-500">{c.number ?? ''}</span>
+                  <ChannelLogo channel={c} className="h-9 w-16 shrink-0 rounded-[4px] !p-1" />
+                  <span className={`min-w-0 flex-1 truncate text-sm ${c.id === id ? 'font-semibold text-slate-100' : 'text-slate-300'}`}>{c.name}</span>
                   {c.favorite && <Heart className="h-3.5 w-3.5 shrink-0 fill-brand text-brand" />}
                 </Link>
               ))}
