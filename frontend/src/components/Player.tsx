@@ -285,8 +285,9 @@ export function Player({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = video.current;
+      // Com um botão/link/campo em destaque, as teclas são da navegação (controle remoto), não do vídeo.
       const tag = (e.target as HTMLElement)?.tagName;
-      if (!el || e.ctrlKey || e.metaKey || e.altKey || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'BUTTON') return;
+      if (!el || e.ctrlKey || e.metaKey || e.altKey || ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A'].includes(tag)) return;
       const k = e.key.toLowerCase();
       if (k === ' ' || k === 'k') {
         e.preventDefault();
