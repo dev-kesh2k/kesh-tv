@@ -21,7 +21,23 @@ android {
     sourceCompatibility JavaVersion.VERSION_17
     targetCompatibility JavaVersion.VERSION_17
   }
+  // Assinatura do APK final: chave por variáveis de ambiente (nunca no repositório).
+  // Sem KESH_KEYSTORE o release sai assinado com a chave de depuração (serve para testes).
+  def ks = System.getenv('KESH_KEYSTORE')
+  signingConfigs {
+    if (ks) {
+      release {
+        storeFile file(ks)
+        storePassword System.getenv('KESH_KEYSTORE_PASSWORD')
+        keyAlias System.getenv('KESH_KEY_ALIAS') ?: 'kesh-tv'
+        keyPassword System.getenv('KESH_KEY_PASSWORD') ?: System.getenv('KESH_KEYSTORE_PASSWORD')
+      }
+    }
+  }
   buildTypes {
-    release { minifyEnabled false }
+    release {
+      minifyEnabled false
+      signingConfig ks ? signingConfigs.release : signingConfigs.debug
+    }
   }
 }
