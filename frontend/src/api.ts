@@ -121,6 +121,8 @@ export interface Channel {
   group: string;
   kind: Kind;
   playlistId: string;
+  /** Número do canal (ordem na lista). */
+  number?: number;
   logo: string;
   favorite: boolean;
   watchedAt?: string;
