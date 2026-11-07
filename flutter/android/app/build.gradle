@@ -1,0 +1,54 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+android {
+    namespace = "br.com.centralappshub.keshtv.kesh_tv"
+    compileSdk = flutter.compileSdkVersion
+    ndkVersion = flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_1_8
+    }
+
+    defaultConfig {
+        applicationId = "br.com.centralappshub.keshtv.flutter"
+        // You can update the following values to match your application needs.
+        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        minSdk = flutter.minSdkVersion
+        targetSdk = flutter.targetSdkVersion
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+    }
+
+    // Mesma chave dos outros APKs quando KESH_KEYSTORE aponta para ela; sem isso, chave de depuração.
+    def ks = System.getenv("KESH_KEYSTORE")
+    signingConfigs {
+        if (ks) {
+            release {
+                storeFile = file(ks)
+                storePassword = System.getenv("KESH_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KESH_KEY_ALIAS") ?: "kesh-tv"
+                keyPassword = System.getenv("KESH_KEY_PASSWORD") ?: System.getenv("KESH_KEYSTORE_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig = ks ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
