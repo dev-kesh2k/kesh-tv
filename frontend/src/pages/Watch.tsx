@@ -140,7 +140,18 @@ export default function Watch() {
                 <ArrowLeft className="h-5 w-5" />
               </button>
               <div className="min-w-0 flex-1 pt-1.5">
-                <h1 className="break-words text-lg font-bold leading-tight sm:text-xl">{ch?.name || '…'}</h1>
+                <h1 className="break-words text-lg font-bold leading-tight sm:text-xl">
+                  {ch?.kind === 'live' && (
+                    <span className="mr-2 inline-flex translate-y-[-2px] items-center gap-1.5 rounded-md bg-red-500/15 px-1.5 py-0.5 align-middle text-[10px] font-bold tracking-wider text-red-400">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-red-500" />
+                      </span>
+                      AO VIVO
+                    </span>
+                  )}
+                  {ch?.name || '…'}
+                </h1>
                 {ch && (
                   <p className="mt-1 truncate text-sm text-slate-400">
                     {around?.series ? (
