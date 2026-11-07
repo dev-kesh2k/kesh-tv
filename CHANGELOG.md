@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-11-07 (noite) — TV, Android e revisão
+
+### Adicionado
+- **Modo TV**: detecção automática (Android TV, Fire TV, Samsung, LG, app Android), escala para 32"–100", margem de overscan, foco inicial, navegação por setas em todo o app, player em tela cheia com painel de informações, OK/teclas de mídia, letras maiores e grade de 4 colunas; opção em Conta.
+- Grupos em fileira de botões no celular (no lugar da lista suspensa).
+- **App Android** (celular e Android TV): WebView com banner da TV, tela cheia, tela acesa durante o vídeo, ponte com o site; **gerador de APK** (`android/build-apk.sh` e workflow *APK Android* com Release).
+- PWA com service worker (abre sem internet), tela "Sem conexão", ajustes para iPhone e atalhos do ícone no Android.
+- Busca sem acentos; botão "Baixar app Android" em Conta.
+
+### Segurança (revisão de código)
+- Proxy recusava 127.0.0.1 mas aceitava `::ffff:127.0.0.1` e afins (IPv4 em IPv6); conexões agora usam o IP checado (sem DNS rebinding).
+- Conteúdo de terceiros servido pelo proxy sai com CSP sandbox (SVG/HTML não rodam script no domínio do app).
+- Trocar a senha encerra os logins dos outros aparelhos (todas as sessões antigas foram encerradas uma vez).
+- Limite de tentativas de login não pode mais ser driblado com `X-Forwarded-For`; novo limite por e-mail.
+
+### Corrigido (revisão de código)
+- MKV H.264 10 bits (Hi10P) ficava com tela preta; agora é convertido.
+- Horários do guia deslocados em Postgres fora de UTC; guia `.gz` sem extensão.
+- Resposta atrasada mostrava grupos da aba errada; navegação por setas 2× mais rápida em grades grandes.
+- Lista com erro baixada a cada 30 min (agora a cada 6 h); rodadas automáticas sobrepostas; limites de conversões simultâneas; "Próximo" em séries enormes; `safeFetch` com pedido já cancelado; memória do limite de login; `npm run dev` sem proxy para a API.
+
 ## 2026-11-07 (tarde)
 
 ### Adicionado
