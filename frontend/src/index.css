@@ -18,6 +18,7 @@ a[href*='/serie/'] {
 }
 body {
   @apply bg-ink-950 text-slate-100 antialiased;
+  font-variant-numeric: tabular-nums; /* horários e números de canal alinhados */
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
 }
@@ -74,4 +75,11 @@ html.is-tv .text-\[13px\] {
 /* Modo TV: 4 colunas (cartões mais largos, nomes inteiros com a letra maior). */
 html.is-tv .tv-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* Títulos estreitos e pesados, como nos guias de programação impressos. */
+.font-display {
+  font-stretch: 72%;
+  font-weight: 700;
+  letter-spacing: -0.005em;
 }
