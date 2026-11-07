@@ -282,7 +282,7 @@ export function Player({
   };
   useEffect(() => () => window.clearTimeout(seekTimer.current), []);
 
-  // Atalhos: espaço/K pausa, F tela cheia, M mudo, ←/→ 10 s (↑/↓ trocam de canal na página).
+  // Atalhos: espaço/K/OK pausa (e teclas de mídia do controle), F tela cheia, M mudo, ←/→ 10 s (↑/↓ trocam de canal na página).
   const box = useRef<HTMLDivElement>(null);
   const seekRef = useRef(seek);
   seekRef.current = seek;
@@ -295,10 +295,19 @@ export function Player({
       const tag = (e.target as HTMLElement)?.tagName;
       if (!el || e.ctrlKey || e.metaKey || e.altKey || ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A'].includes(tag)) return;
       const k = e.key.toLowerCase();
-      if (k === ' ' || k === 'k') {
+      if (k === ' ' || k === 'k' || k === 'enter' || k === 'mediaplaypause') {
         e.preventDefault();
+        // OK do controle: se começou mudo (autoplay bloqueado), o primeiro OK liga o som.
+        if (k === 'enter' && el.muted && !el.paused) {
+          el.muted = false;
+          return;
+        }
         if (el.paused) el.play().catch(() => {});
         else el.pause();
+      } else if (k === 'mediaplay') {
+        el.play().catch(() => {});
+      } else if (k === 'mediapause' || k === 'mediastop') {
+        el.pause();
       } else if (k === 'f') {
         if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
         else (box.current || el).requestFullscreen?.().catch(() => {});
