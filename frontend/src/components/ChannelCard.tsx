@@ -97,7 +97,7 @@ export function ChannelCard({ channel, onChange, onRemove }: { channel: Channel;
 
 export function ChannelGrid({ channels, onChange, onRemove }: { channels: Channel[]; onChange?: (c: Channel) => void; onRemove?: (c: Channel) => void }) {
   return (
-    <div className="grid grid-cols-2 gap-2.5 min-[480px]:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 sm:gap-3">
+    <div className="tv-grid grid grid-cols-2 gap-2.5 min-[480px]:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 sm:gap-3">
       {channels.map((c) => (
         <ChannelCard key={c.id} channel={c} onChange={onChange} onRemove={onRemove} />
       ))}
@@ -126,7 +126,7 @@ export function SeriesCard({ series }: { series: Series }) {
 
 export function SeriesGrid({ series }: { series: Series[] }) {
   return (
-    <div className="grid grid-cols-2 gap-2.5 min-[480px]:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 sm:gap-3">
+    <div className="tv-grid grid grid-cols-2 gap-2.5 min-[480px]:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 sm:gap-3">
       {series.map((s) => (
         <SeriesCard key={`${s.playlistId}|${s.name}`} series={s} />
       ))}
@@ -137,7 +137,7 @@ export function SeriesGrid({ series }: { series: Series[] }) {
 /** Grade de cartões "fantasma" enquanto a lista carrega (evita a tela pular quando os dados chegam). */
 export function SkeletonGrid({ count = 12, poster = false }: { count?: number; poster?: boolean }) {
   return (
-    <div className="grid grid-cols-2 gap-2.5 min-[480px]:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 sm:gap-3" aria-hidden="true">
+    <div className="tv-grid grid grid-cols-2 gap-2.5 min-[480px]:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 sm:gap-3" aria-hidden="true">
       {Array.from({ length: count }, (_, i) => (
         <div key={i} className="overflow-hidden rounded-2xl border border-ink-700/40 bg-ink-900">
           <div className={`w-full animate-pulse bg-ink-800 ${poster ? 'aspect-[3/4]' : 'aspect-video'}`} />

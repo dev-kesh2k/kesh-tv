@@ -71,3 +71,7 @@ html.is-tv .text-\[11px\] {
 html.is-tv .text-\[13px\] {
   font-size: 15px;
 }
+/* Modo TV: 4 colunas (cartões mais largos, nomes inteiros com a letra maior). */
+html.is-tv .tv-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
