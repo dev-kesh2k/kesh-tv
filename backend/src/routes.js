@@ -2,7 +2,8 @@ import express, { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma, HttpError } from './db.js';
 import { signToken, publicUser, requireAuth, tooManyAttempts, recordFailure, clearFailures, clientIp } from './auth.js';
-import { startSync } from './sync.js';
+import { expandXtreamSeries, startSync } from './sync.js';
+import { SERIES_MARK } from './xtream.js';
 import { normalizeSearch } from './m3u.js';
 import { cleanSeconds, resumePoint, watchedFraction } from './progress.js';
 import { buildExport, parseImport } from './favorites-io.js';
@@ -314,6 +315,7 @@ async function ownChannel(req) {
 /** Fontes para tocar o canal, em ordem de tentativa (o player passa para a próxima se uma falhar). */
 api.get('/channels/:id/play', wrap(async (req, res) => {
   const ch = await ownChannel(req);
+  if (ch.tvgId?.startsWith(SERIES_MARK)) throw new HttpError(409, 'Abra a série para escolher o episódio');
   const sources = [];
   const add = (url, type) => {
     const custom = ch.userAgent || ch.referrer;
@@ -408,6 +410,16 @@ api.get('/series/episodes', wrap(async (req, res) => {
   });
   // Item de série sem SxxEyy no nome: é a própria "série" de um episódio só.
   if (!rows.length) rows = await prisma.channel.findMany({ where: { playlistId: pl.id, kind: 'series', name }, select: { ...channelSelect, season: true, episode: true }, take: 50 });
+  // Série da API Xtream ainda sem episódios: busca no provedor agora e lê de novo.
+  if (rows.length === 1 && rows[0].tvgId?.startsWith(SERIES_MARK)) {
+    await expandXtreamSeries(pl, rows[0]);
+    rows = await prisma.channel.findMany({
+      where: { playlistId: pl.id, seriesName: name },
+      select: { ...channelSelect, season: true, episode: true },
+      orderBy: [{ season: 'asc' }, { episode: 'asc' }, { position: 'asc' }],
+      take: 5000,
+    });
+  }
   if (!rows.length) throw new HttpError(404, 'Série não encontrada');
   const list = await decorate(req.user.id, rows);
   res.json({
