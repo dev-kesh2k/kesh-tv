@@ -4,7 +4,8 @@ import { HttpError } from './db.js';
 import { startAutoRefresh } from './sync.js';
 
 const app = express();
-app.set('trust proxy', true);
+// Só proxies locais são confiáveis para X-Forwarded-For (visitante não escolhe o próprio IP).
+app.set('trust proxy', 'loopback');
 app.disable('x-powered-by');
 app.use((req, res, next) => (/\/(playlists\/upload|favorites\/import)$/.test(req.path) ? next() : express.json({ limit: '200kb' })(req, res, next)));
 

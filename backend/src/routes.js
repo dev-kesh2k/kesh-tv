@@ -1,7 +1,7 @@
 import express, { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma, HttpError } from './db.js';
-import { signToken, publicUser, requireAuth, tooManyAttempts, recordFailure, clearFailures } from './auth.js';
+import { signToken, publicUser, requireAuth, tooManyAttempts, recordFailure, clearFailures, clientIp } from './auth.js';
 import { startSync } from './sync.js';
 import { normalizeSearch } from './m3u.js';
 import { cleanSeconds, resumePoint, watchedFraction } from './progress.js';
@@ -58,11 +58,14 @@ api.get('/convert/:sid/:file', wrap(serveConversion));
 api.post('/auth/login', wrap(async (req, res) => {
   const email = text(req.body?.email, 'E-mail', { max: 160, required: true }).toLowerCase();
   const pass = String(req.body?.password || '');
-  const key = `${req.ip}:${email}`;
-  if (tooManyAttempts(key)) throw new HttpError(429, 'Muitas tentativas. Aguarde 15 minutos.');
+  // Dois limites: por IP+e-mail (10 em 15 min) e só por e-mail (30), contra tentativas vindas de vários IPs.
+  const key = `${clientIp(req)}:${email}`;
+  const emailKey = `*:${email}`;
+  if (tooManyAttempts(key) || tooManyAttempts(emailKey, 30)) throw new HttpError(429, 'Muitas tentativas. Aguarde 15 minutos.');
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user || !(await bcrypt.compare(pass, user.passwordHash))) {
     recordFailure(key);
+    recordFailure(emailKey);
     throw new HttpError(401, 'E-mail ou senha incorretos');
   }
   clearFailures(key);
