@@ -1,6 +1,7 @@
 package br.com.centralappshub.keshtv.kotlin
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
@@ -41,6 +42,8 @@ fun KeshTheme(content: @Composable () -> Unit) {
       bodyMedium = TextStyle(fontSize = 15.sp),
       bodySmall = TextStyle(fontSize = 13.sp, color = Kesh.Fog),
     ),
-    content = content,
-  )
+  ) {
+    // Surface define a cor padrão do texto (papel); sem ela o Compose usa preto.
+    Surface(color = Kesh.Ink, contentColor = Kesh.Paper, content = content)
+  }
 }
