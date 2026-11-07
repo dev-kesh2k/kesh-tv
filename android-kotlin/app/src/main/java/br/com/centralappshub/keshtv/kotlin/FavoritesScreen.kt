@@ -7,7 +7,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +31,7 @@ fun ChannelListScreen(title: String, empty: String, load: suspend () -> List<Cha
   LaunchedEffect(Unit) {
     try { list = load() } catch (e: ApiError) { error = e.message ?: "Erro" }
   }
+  val listState = rememberLazyListState()
   Column(Modifier.fillMaxSize()) {
     Text(title, style = MaterialTheme.typography.headlineSmall, fontFamily = Condensed, modifier = Modifier.padding(sideMargin(), 12.dp, sideMargin(), 8.dp))
     val items = list
@@ -37,8 +39,8 @@ fun ChannelListScreen(title: String, empty: String, load: suspend () -> List<Cha
       error.isNotEmpty() -> Text(error, color = Kesh.Tally, modifier = Modifier.padding(horizontal = sideMargin(), vertical = 12.dp))
       items == null -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator(color = Kesh.Signal) }
       items.isEmpty() -> Text(empty, style = MaterialTheme.typography.bodyMedium, color = Kesh.Fog, modifier = Modifier.padding(horizontal = sideMargin(), vertical = 12.dp))
-      else -> LazyColumn(Modifier.fillMaxWidth(if (isTv()) 0.65f else 1f), contentPadding = PaddingValues(start = sideMargin(), end = sideMargin(), bottom = 24.dp)) {
-        items(items, key = { it.id }) { c -> GuideRow(c) { onOpen(c) } }
+      else -> LazyColumn(Modifier.fillMaxWidth(if (isTv()) 0.65f else 1f), state = listState, contentPadding = PaddingValues(start = sideMargin(), end = sideMargin(), bottom = 24.dp)) {
+        itemsIndexed(items, key = { _, c -> c.id }) { i, c -> GuideRow(c, Modifier.keepVisible(listState, i)) { onOpen(c) } }
       }
     }
   }

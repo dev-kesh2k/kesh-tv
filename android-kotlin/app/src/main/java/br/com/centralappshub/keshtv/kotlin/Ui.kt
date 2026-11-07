@@ -6,7 +6,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalDensity
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,4 +48,44 @@ fun sideMargin(): Dp = if (isTv()) 48.dp else 16.dp
 /** Clique sem o realce cinza padrão (na TV o foco já é mostrado pelo próprio item). */
 fun Modifier.tvClick(onClick: () -> Unit): Modifier = composed {
   clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick)
+}
+
+/** Com o foco, rola a grade até o item aparecer inteiro (o padrão do Compose para em "meio visível"). */
+fun Modifier.keepVisible(state: LazyGridState, index: Int): Modifier = composed {
+  val scope = rememberCoroutineScope()
+  val margin = with(LocalDensity.current) { 32.dp.toPx() }
+  onFocusChanged { f ->
+    if (!f.isFocused) return@onFocusChanged
+    scope.launch {
+      delay(16) // deixa o Compose terminar a rolagem dele primeiro
+      val info = state.layoutInfo
+      val item = info.visibleItemsInfo.firstOrNull { it.index == index } ?: return@launch
+      val bottom = item.offset.y + item.size.height + margin - info.viewportEndOffset
+      val top = item.offset.y - margin - info.viewportStartOffset
+      when {
+        bottom > 0 -> state.animateScrollBy(bottom)
+        top < 0 -> state.animateScrollBy(top)
+      }
+    }
+  }
+}
+
+/** O mesmo para listas (LazyColumn). */
+fun Modifier.keepVisible(state: LazyListState, index: Int): Modifier = composed {
+  val scope = rememberCoroutineScope()
+  val margin = with(LocalDensity.current) { 24.dp.toPx() }
+  onFocusChanged { f ->
+    if (!f.isFocused) return@onFocusChanged
+    scope.launch {
+      delay(16)
+      val info = state.layoutInfo
+      val item = info.visibleItemsInfo.firstOrNull { it.index == index } ?: return@launch
+      val bottom = item.offset + item.size + margin - info.viewportEndOffset
+      val top = item.offset - margin - info.viewportStartOffset
+      when {
+        bottom > 0 -> state.animateScrollBy(bottom)
+        top < 0 -> state.animateScrollBy(top)
+      }
+    }
+  }
 }
