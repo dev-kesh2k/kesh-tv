@@ -114,7 +114,26 @@ export interface Channel {
   /** Recentes: segundos para continuar e fração assistida (0–1). */
   position?: number;
   progress?: number;
+  /** Guia de programação (canais ao vivo com tvg-id). */
+  now?: Programme;
+  next?: Programme;
 }
+
+export interface Programme {
+  title: string;
+  start: string;
+  stop: string;
+  desc?: string;
+}
+
+/** Fração já exibida do programa (0–1). */
+export function programmeProgress(p: Programme, at = Date.now()) {
+  const a = Date.parse(p.start);
+  const b = Date.parse(p.stop);
+  return b > a ? Math.min(1, Math.max(0, (at - a) / (b - a))) : 0;
+}
+
+export const hhmm = (iso: string) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
 export interface Series {
   playlistId: string;
