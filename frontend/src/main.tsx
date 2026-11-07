@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { AuthProvider } from './auth';
+// Archivo variável com eixo de largura: condensada nos nomes de canal (como guia de TV impresso), normal no texto.
+import '@fontsource-variable/archivo/wdth.css';
 import './index.css';
 import { installSpatialNav } from './spatial';
 import { applyPlatformClasses } from './platform';
