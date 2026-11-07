@@ -26,11 +26,11 @@ function GroupList({ groups, total, current, onPick, onHide }: { groups: Group[]
     return az ? [...list].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR', { sensitivity: 'base' })) : list;
   }, [groups, filter, az]);
   const item = (name: string, label: string, count: number) => (
-    <div key={name} className={`group/item flex items-center rounded-xl transition ${current === name ? 'bg-brand/15' : 'hover:bg-ink-800'}`}>
+    <div key={name} className={`group/item flex items-center border-l-[3px] transition-colors ${current === name ? 'border-brand bg-ink-900' : 'border-transparent hover:bg-ink-900'}`}>
       <button
         type="button"
         onClick={() => onPick(name)}
-        className={`flex min-h-[44px] min-w-0 flex-1 items-center justify-between gap-2 px-3 text-left text-sm ${current === name ? 'font-semibold text-brand-light' : 'text-slate-300'}`}
+        className={`flex min-h-[44px] min-w-0 flex-1 items-center justify-between gap-2 px-3 text-left text-sm ${current === name ? 'font-semibold text-slate-100' : 'text-slate-400'}`}
       >
         <span className="min-w-0 truncate">{label}</span>
         <span className="shrink-0 text-xs text-slate-500">{count.toLocaleString('pt-BR')}</span>
@@ -88,12 +88,12 @@ function GroupChips({ groups, total, current, onPick }: { groups: Group[]; total
       type="button"
       aria-pressed={current === name}
       onClick={() => onPick(name)}
-      className={`flex min-h-[44px] shrink-0 snap-start items-center gap-1.5 rounded-xl border px-3.5 text-sm transition ${
-        current === name ? 'border-brand bg-brand/15 font-semibold text-brand-light' : 'border-ink-700 bg-ink-900 text-slate-300 hover:bg-ink-800'
+      className={`flex min-h-[44px] shrink-0 snap-start items-center gap-1.5 rounded-md px-3.5 text-sm transition-colors ${
+        current === name ? 'bg-brand font-semibold text-ink-950' : 'bg-ink-900 text-slate-300 hover:bg-ink-800'
       }`}
     >
       <span className="max-w-[14rem] truncate">{label}</span>
-      <span className="text-xs text-slate-500">{count.toLocaleString('pt-BR')}</span>
+      <span className={`text-xs ${current === name ? 'text-ink-950/70' : 'text-slate-500'}`}>{count.toLocaleString('pt-BR')}</span>
     </button>
   );
   return (
@@ -275,24 +275,26 @@ export default function Browse() {
       </div>
 
       {!q && (
-        <div className="no-scrollbar -mx-3 mb-4 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:px-0">
+        <nav aria-label="Tipo" className="no-scrollbar -mx-3 mb-5 flex gap-6 overflow-x-auto border-b border-ink-800 px-3 sm:mx-0 sm:px-0">
           {kinds.map((k) => (
             <button
               key={k}
               type="button"
+              aria-pressed={kind === k}
               onClick={() => set({ tipo: k === 'live' ? null : k, grupo: null })}
-              className={`min-h-[40px] shrink-0 rounded-full px-4 text-sm font-semibold transition ${kind === k ? 'bg-brand text-ink-950' : 'bg-ink-800 text-slate-300 hover:bg-ink-700'}`}
+              className={`-mb-px flex min-h-[48px] shrink-0 items-baseline gap-2 border-b-[3px] pt-2 transition-colors ${kind === k ? 'border-brand text-slate-100' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
             >
-              {KIND_LABEL[k]} <span className="ml-1 text-xs opacity-70">{counts[k].toLocaleString('pt-BR')}</span>
+              <span className="font-display text-[1.4rem] leading-none">{KIND_LABEL[k]}</span>
+              <span className="text-xs">{counts[k].toLocaleString('pt-BR')}</span>
             </button>
           ))}
-        </div>
+        </nav>
       )}
 
       <div className="lg:flex lg:items-start lg:gap-6">
         {!q && (
           <aside className="sticky top-4 hidden h-[calc(100dvh-8rem)] w-64 shrink-0 flex-col lg:flex">
-            <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-slate-500">Grupos</p>
+            <p className="mb-2 px-3 text-sm text-slate-500">Grupos</p>
             <GroupList groups={groups} total={gdata?.total || 0} current={group} onPick={pickGroup} onHide={hideGroup} />
           </aside>
         )}
