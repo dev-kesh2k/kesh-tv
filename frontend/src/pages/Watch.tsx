@@ -6,6 +6,8 @@ import { ChannelLogo } from '../components/ChannelCard';
 import { Player } from '../components/Player';
 import { Guide } from '../components/Guide';
 import { SleepTimer } from '../components/SleepTimer';
+import { TvOsd } from '../components/TvOsd';
+import { platform } from '../platform';
 import { useTitle } from '../useTitle';
 import { btnGhost, ErrorBox, Spinner } from '../components/ui';
 
@@ -138,6 +140,19 @@ export default function Watch() {
   };
 
   const ch = info?.channel;
+
+  // TV: vídeo na tela toda, comandado pelo controle remoto, com painel de informações por cima.
+  if (platform.tv)
+    return (
+      <div className="fixed inset-0 z-50 bg-black">
+        {info ? (
+          <Player key={restartKey} sources={info.sources} title={ch?.name || ''} onPlaying={onPlaying} startAt={startAt} onProgress={ch?.kind === 'live' ? undefined : onProgress} controls={false} fill />
+        ) : (
+          <div className="grid h-full place-items-center">{error ? <ErrorBox message={error} /> : <Spinner />}</div>
+        )}
+        <TvOsd channel={ch} />
+      </div>
+    );
 
   return (
     <main className="mx-auto w-full max-w-[1600px] pb-6 sm:px-5 sm:pt-[max(1rem,env(safe-area-inset-top))] lg:px-8 lg:pt-6">
