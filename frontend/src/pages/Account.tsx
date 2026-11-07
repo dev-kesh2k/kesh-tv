@@ -140,7 +140,7 @@ function TvModeSection() {
       type="button"
       aria-pressed={current === value}
       onClick={() => setTvMode(value === 'auto' ? null : value === 'on')}
-      className={`min-h-[44px] flex-1 rounded-lg px-3 text-sm font-semibold ${current === value ? 'bg-brand text-white' : 'text-slate-300 hover:bg-ink-700'}`}
+      className={`min-h-[44px] flex-1 rounded-lg px-3 text-sm font-semibold ${current === value ? 'bg-brand text-ink-950' : 'text-slate-300 hover:bg-ink-700'}`}
     >
       {label}
     </button>

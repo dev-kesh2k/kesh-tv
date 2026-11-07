@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 
 export const btn =
   'inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition active:scale-[.98] disabled:opacity-50 disabled:pointer-events-none';
-export const btnPrimary = `${btn} bg-brand text-white hover:bg-brand-dark`;
+export const btnPrimary = `${btn} bg-brand text-ink-950 hover:bg-brand-dark`;
 export const btnGhost = `${btn} bg-ink-800 text-slate-200 hover:bg-ink-700`;
 export const btnDanger = `${btn} bg-red-500/10 text-red-300 hover:bg-red-500/20`;
 export const input =

@@ -26,7 +26,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="mt-5 inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-white"
+            className="mt-5 inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-ink-950"
           >
             <RotateCcw className="h-4 w-4" /> Recarregar
           </button>
