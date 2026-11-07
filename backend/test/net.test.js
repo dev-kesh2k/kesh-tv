@@ -25,3 +25,16 @@ test('safeFetch respeita pedido já cancelado', async () => {
   ctrl.abort(new Error('fechou'));
   await assert.rejects(safeFetch('http://1.1.1.1/', { signal: ctrl.signal }), /fechou/);
 });
+
+test('DNS rebinding: a conexão não usa um IP interno resolvido depois da checagem', async () => {
+  const { safeFetch } = await import('../src/net.js');
+  const dns = (await import('node:dns/promises')).default;
+  const orig = dns.lookup;
+  let n = 0;
+  dns.lookup = async () => (n++ === 0 ? [{ address: '93.184.216.34', family: 4 }] : [{ address: '127.0.0.1', family: 4 }]);
+  try {
+    await assert.rejects(safeFetch('http://rebind.example/'));
+  } finally {
+    dns.lookup = orig;
+  }
+});
