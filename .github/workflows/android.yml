@@ -1,0 +1,80 @@
+name: APK Android
+
+# Gera o APK (celular e Android TV):
+#  - em PRs que mexem em android/: só compila (checagem);
+#  - manualmente (Actions → APK Android → Run workflow) ou ao criar uma tag v1.2.3:
+#    compila assinado e publica numa Release com kesh-tv.apk.
+on:
+  push:
+    tags: ['v*']
+  pull_request:
+    paths: ['android/**', '.github/workflows/android.yml']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versão (ex.: 1.2.0)'
+        required: true
+        default: '1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Versão
+        id: v
+        run: |
+          V="${{ github.event.inputs.version }}"
+          [ -n "$V" ] || V="${GITHUB_REF_NAME#v}"
+          [ "${{ github.event_name }}" = pull_request ] && V="0.0.0-pr${{ github.event.number }}"
+          echo "name=$V" >> "$GITHUB_OUTPUT"
+          echo "code=$(date +%s | cut -c1-9)" >> "$GITHUB_OUTPUT"
+
+      - name: Chave de assinatura
+        if: github.event_name != 'pull_request'
+        env:
+          KEYSTORE_B64: ${{ secrets.KESH_KEYSTORE_B64 }}
+        run: |
+          [ -n "$KEYSTORE_B64" ] || { echo "::error::Defina o segredo KESH_KEYSTORE_B64"; exit 1; }
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/kesh-tv.jks"
+          echo "KESH_KEYSTORE=$RUNNER_TEMP/kesh-tv.jks" >> "$GITHUB_ENV"
+
+      - name: Compilar
+        env:
+          KESH_KEYSTORE_PASSWORD: ${{ secrets.KESH_KEYSTORE_PASSWORD }}
+        run: |
+          ./gradlew --no-daemon assembleRelease -PversionName="${{ steps.v.outputs.name }}" -PversionCode="${{ steps.v.outputs.code }}"
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk "dist/kesh-tv-${{ steps.v.outputs.name }}.apk"
+          cp app/build/outputs/apk/release/app-release.apk dist/kesh-tv.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kesh-tv-${{ steps.v.outputs.name }}
+          path: android/dist/kesh-tv-${{ steps.v.outputs.name }}.apk
+
+      - name: Publicar na Release
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.v.outputs.name }}
+          name: Kesh TV ${{ steps.v.outputs.name }}
+          body: |
+            App Android do Kesh TV (celular e Android TV).
+            Baixe **kesh-tv.apk** e abra no aparelho (permita "instalar apps desconhecidos").
+          files: |
+            android/dist/kesh-tv.apk
+            android/dist/kesh-tv-${{ steps.v.outputs.name }}.apk
+          make_latest: true
