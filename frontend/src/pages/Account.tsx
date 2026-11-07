@@ -4,6 +4,7 @@ import { api, User, useApi } from '../api';
 import { useAuth } from '../auth';
 import { Page } from '../components/Layout';
 import { btnDanger, btnGhost, btnPrimary, card, ErrorBox, input, PageTitle } from '../components/ui';
+import { useTitle } from '../useTitle';
 
 function useForm() {
   const [error, setError] = useState('');
@@ -92,6 +93,7 @@ export default function Account() {
   const [password, setPassword] = useState('');
   const profile = useForm();
   const pass = useForm();
+  useTitle('Conta');
   if (!user) return null;
 
   const saveName = (e: FormEvent) => {
