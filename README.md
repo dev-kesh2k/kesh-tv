@@ -38,14 +38,26 @@
 
 ## Recursos
 
-- **Listas por link ou arquivo** — importação em fluxo, aguenta listas enormes (testado com 364 mil itens / 95 MB em ~45 s e ~190 MB de memória); atualização automática diária; reimportar mantém favoritos e recentes.
-- **Ao vivo, Filmes e Séries** separados automaticamente (pelo link no padrão Xtream ou pelo grupo), com grupos (`group-title`) e busca.
-- **Séries agrupadas** — episódios `S01E02` viram uma série com temporadas, botão *Continuar* e *Próximo episódio*.
-- **Player que se vira sozinho** — HLS (hls.js ou nativo no iPhone), MPEG-TS/FLV (mpegts.js) e MP4; se uma fonte falha, tenta a próxima (link direto → proxy → `.m3u8` do Xtream).
-- **Conversão no servidor** — MKV, AVI, HEVC 10-bit, Opus… viram HLS na hora com ffmpeg (H.264 só é reempacotado, quase sem CPU), com barra própria de avanço.
-- **Proxy seguro** para streams `http://` (bloqueados em páginas HTTPS), servidores sem CORS ou com `User-Agent`/`Referer` próprios (`#EXTVLCOPT`) — links assinados com validade e bloqueio de endereços internos.
-- **Favoritos, recentes, vários usuários** (cada um com as próprias listas) e PWA para a tela de início.
-- **Layout mobile-first** de 320 px a desktop, tema escuro.
+**Listas e canais**
+- Listas M3U por **link** (atualização automática diária) ou **arquivo**; importação em fluxo para listas enormes (testado com 364 mil itens / 95 MB em ~45 s e ~190 MB de memória), com progresso na tela.
+- **Ao vivo, Filmes e Séries** separados automaticamente (pelo link no padrão Xtream ou pelo grupo), com grupos (`group-title`) em fileira de botões ou lista lateral, ordem A–Z opcional e **grupos ocultos**.
+- **Busca sem acentos** ("acao" acha "Ação") em canais, filmes e séries.
+- **Séries agrupadas** por temporada, com *Continuar* e *Próximo episódio*.
+- **Favoritos** (com exportar/importar em JSON), **Recentes** com barra de progresso e **continuar de onde parou** em filmes e episódios.
+- **Guia de programação (EPG)**: descobre o XMLTV da lista e mostra o programa no ar nos cartões e a programação na tela do canal.
+
+**Player**
+- HLS (hls.js ou nativo no iPhone), MPEG-TS/FLV (mpegts.js) e MP4, com troca automática de fonte (link direto → proxy → `.m3u8` do Xtream).
+- **Conversão no servidor** (ffmpeg → HLS) para MKV, AVI, HEVC/H.264 10 bits e Opus, com barra própria de avanço.
+- Atalhos de teclado e controle remoto, **mini player** (Picture-in-Picture) e **timer para desligar**.
+
+**Plataformas**
+- **Celular, tablet e computador** (layout mobile-first, PWA instalável que abre sem internet).
+- **TV**: modo TV automático (Android TV, Fire TV, Samsung, LG) com escala para telas de 32" a 100", navegação pelo controle remoto e player em tela cheia.
+- **App Android** (celular e Android TV) com gerador de APK.
+
+**Outros**
+- Vários usuários (cada um com as próprias listas), resumo em Conta e proxy seguro para streams `http://`, servidores sem CORS ou com `User-Agent`/`Referer` próprios.
 
 ## Como funciona
 
