@@ -267,8 +267,14 @@ api.get('/channels/:id/play', wrap(async (req, res) => {
   const alt = ch.kind === 'live' && type !== 'hls' ? xtreamHls(ch.url) : null;
   if (alt) add(alt, 'hls');
   if (type === 'unknown') type = await probeType(ch.url, ch.userAgent, ch.referrer);
-  if (type === 'file' && !/\.(mp4|m4v|webm|mp3|aac)$/i.test(ch.url.split('?')[0])) {
-    // MKV, AVI, MOV…: o navegador não toca (ou só às vezes) → converte direto.
+  const path = ch.url.split('?')[0];
+  if (type === 'file' && /\.avi$/i.test(path)) {
+    // Muitos ".avi" de listas Xtream são MP4 (H.264/AAC) com outro nome: tenta tocar direto (com avanço nativo);
+    // AVI de verdade o navegador recusa em instantes e cai na conversão.
+    add(ch.url, 'file');
+    sources.push(convert);
+  } else if (type === 'file' && !/\.(mp4|m4v|webm|mp3|aac)$/i.test(path)) {
+    // MKV, MOV…: o navegador não toca (ou só às vezes) → converte direto.
     sources.push(convert);
   } else {
     add(ch.url, type === 'unknown' ? 'ts' : type);
