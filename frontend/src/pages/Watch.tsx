@@ -159,7 +159,7 @@ export default function Watch() {
       <div className="xl:flex xl:items-start xl:gap-6">
         <div className="min-w-0 flex-1">
           <div className="sticky top-0 z-20 bg-black pt-[env(safe-area-inset-top)] sm:static sm:bg-transparent sm:pt-0">
-            {info ? <Player key={restartKey} sources={info.sources} title={ch?.name || ''} onPlaying={onPlaying} startAt={startAt} onProgress={ch?.kind === 'live' ? undefined : onProgress} /> : <div className="grid aspect-video w-full place-items-center bg-black sm:rounded-2xl">{error ? null : <Spinner />}</div>}
+            {info ? <Player key={restartKey} sources={info.sources} title={ch?.name || ''} onPlaying={onPlaying} startAt={startAt} onProgress={ch?.kind === 'live' ? undefined : onProgress} /> : <div className="grid aspect-video w-full place-items-center bg-black sm:rounded-[6px]">{error ? null : <Spinner />}</div>}
           </div>
 
           <div className="px-3 pt-3 sm:px-0">

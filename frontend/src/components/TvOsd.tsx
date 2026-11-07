@@ -28,10 +28,10 @@ export function TvOsd({ channel }: { channel?: Channel }) {
         <ChannelLogo channel={channel} className="h-24 w-40 shrink-0 rounded-[6px]" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-3">
-            {live && <span className="rounded-md bg-tally px-2 py-0.5 text-sm font-bold tracking-wider text-white">AO VIVO</span>}
+            {live && <span className="inline-flex items-center gap-1.5 rounded-[3px] bg-tally px-2 py-0.5 text-sm font-bold text-white"><span className="h-2 w-2 rounded-full bg-white" /> Ao vivo</span>}
             <span className="truncate text-lg text-slate-300">{channel.group}</span>
           </div>
-          <h1 className="mt-1 truncate text-4xl font-bold text-white">{channel.name}</h1>
+          <h1 className="font-display mt-1 truncate text-5xl text-white">{channel.name}</h1>
           {channel.now && (
             <div className="mt-3 max-w-3xl">
               <p className="truncate text-xl text-slate-100">
@@ -45,16 +45,19 @@ export function TvOsd({ channel }: { channel?: Channel }) {
               {channel.next && (
                 <p className="mt-2 truncate text-lg text-slate-400">
                   <span className="mr-2">A seguir</span>
-                  {channel.next.title} · {hhmm(channel.next.start)}
+                  {hhmm(channel.next.start)} {channel.next.title}
                 </p>
               )}
             </div>
           )}
         </div>
       </div>
-      <p className="mt-6 text-base text-slate-400">
-        <b className="text-slate-200">OK</b> pausa · <b className="text-slate-200">▲▼</b> {live ? 'troca de canal' : 'episódio/item'} · <b className="text-slate-200">◀▶</b> 10 s · <b className="text-slate-200">Voltar</b> sai
-      </p>
+      <ul className="mt-6 flex flex-wrap gap-x-8 gap-y-1 text-base text-slate-400">
+        <li><b className="text-slate-200">OK</b> pausa</li>
+        <li><b className="text-slate-200">▲▼</b> {live ? 'troca de canal' : 'episódio ou item'}</li>
+        <li><b className="text-slate-200">◀▶</b> 10 segundos</li>
+        <li><b className="text-slate-200">Voltar</b> sai</li>
+      </ul>
     </div>
   );
 }
