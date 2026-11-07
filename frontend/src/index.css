@@ -27,6 +27,25 @@ select,
 textarea {
   font-size: 16px;
 }
+/* Barras de rolagem finas e escuras (no Windows a padrão é branca e larga). */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2a3446 transparent;
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a3446;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3b475c;
+}
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
