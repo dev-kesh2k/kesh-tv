@@ -141,6 +141,15 @@ O modo TV liga sozinho em Android TV, Fire TV, Samsung (Tizen), LG (webOS) e no 
 - **Android:** Chrome → *Instalar app*; segurar o ícone mostra atalhos para Favoritos, Recentes e Filmes.
 - O app guarda telas e arquivos (service worker) e abre sem internet; sem conexão mostra "Sem conexão" e reconecta sozinho.
 
+## Listas M3U suportadas
+
+- Formato estendido (`#EXTM3U`/`#EXTINF`) com `tvg-id`, `tvg-name`, `tvg-logo`, `group-title`, `#EXTGRP`; também lista sem `#EXTM3U` e quebras de linha do Windows.
+- Cabeçalhos por canal: `#EXTVLCOPT:http-user-agent=…`, `#EXTVLCOPT:http-referrer=…` e o formato Kodi `url|User-Agent=…&Referer=…`.
+- Guia de programação: `url-tvg` / `x-tvg-url` no `#EXTM3U` ou, em servidores Xtream (`get.php?username=…&password=…`), o `xmltv.php` correspondente.
+- **Tipo do item** (nesta ordem): `/movie/` → filme, `/series/` → série, `/live/` ou `.ts`/`.m3u8` → ao vivo; sem pista no link, decide pelo grupo ("Séries", "Novelas", "Filmes", "VOD"…).
+- **Séries**: o nome antes de `S01E02` / `S1 E2` vira a série; episódios são ordenados por temporada e número.
+- URLs repetidas são ignoradas; limites: 300 MB e 15 min por download, até 1 milhão de itens, 20 listas por usuário, upload de arquivo até 95 MB (use o link para listas maiores).
+
 ## Rodando localmente (desenvolvimento)
 
 Requisitos: Node 22, PostgreSQL e ffmpeg (para a conversão).
