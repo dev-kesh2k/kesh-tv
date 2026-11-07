@@ -210,15 +210,30 @@ npm run dev
 
 Com Docker, o `backend/Dockerfile` já traz Node + ffmpeg.
 
-## Variáveis do backend
+## Configuração
 
-| Variável | Para quê |
+**Backend** (`backend/.env`; no Docker, `deploy/docker/.env`):
+
+| Variável | Para quê | Padrão |
+| --- | --- | --- |
+| `DATABASE_URL` | PostgreSQL | — |
+| `JWT_SECRET` | assina o login e os links do proxy (sem ela, sessões e links caem a cada reinício) | aleatório |
+| `PORT` | porta da API | `3000` |
+| `PUBLIC_PATH` | prefixo quando roda num subcaminho (ex.: `/kesh-tv`) | vazio |
+| `SEED_ADMIN_NAME` / `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | admin criado no primeiro start (só se não houver admin) | — |
+| `TRUST_CLOUDFLARE` | `1` atrás do Cloudflare: usa `CF-Connecting-IP` no limite de login | desligado |
+| `DB_POOL_SIZE` | conexões do Prisma com o banco | `3` |
+| `TZ` | fuso do servidor | `America/Sao_Paulo` |
+| `NODE_OPTIONS` | limite de memória do Node | `--max-old-space-size=256` |
+
+**App Android** (gerador de APK):
+
+| Variável / propriedade | Para quê |
 | --- | --- |
-| `DATABASE_URL` | PostgreSQL |
-| `JWT_SECRET` | assinatura do login e dos links do proxy |
-| `PUBLIC_PATH` | prefixo quando o app roda num subcaminho (ex.: `/kesh-tv`) |
-| `SEED_ADMIN_*` | admin criado no primeiro start |
-| `NODE_OPTIONS` | limite de memória (padrão `--max-old-space-size=256`) |
+| `KESH_KEYSTORE`, `KESH_KEYSTORE_PASSWORD`, `KESH_KEY_ALIAS`, `KESH_KEY_PASSWORD` | chave de assinatura (sem ela, o release sai com a chave de depuração) |
+| `-PstartUrl=` | endereço do Kesh TV que o app abre |
+| `-PversionName=` / `-PversionCode=` | versão do app |
+| Segredos do GitHub `KESH_KEYSTORE_B64`, `KESH_KEYSTORE_PASSWORD` | assinatura no workflow *APK Android* |
 
 ## Observações
 
