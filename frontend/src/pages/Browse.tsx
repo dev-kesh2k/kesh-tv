@@ -305,7 +305,7 @@ export default function Browse() {
 
       <div className="lg:flex lg:items-start lg:gap-6">
         {!q && (
-          <aside className="sticky top-4 hidden h-[calc(100dvh-2rem)] w-64 shrink-0 flex-col lg:flex">
+          <aside className="sticky top-20 hidden h-[calc(100dvh-6rem)] w-64 shrink-0 flex-col lg:flex">
             <p className="mb-2 px-3 text-sm text-slate-500">Grupos</p>
             <GroupList groups={groups} total={gdata?.total || 0} current={group} onPick={pickGroup} onHide={hideGroup} kind={kind} />
           </aside>
