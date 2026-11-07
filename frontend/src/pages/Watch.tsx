@@ -9,7 +9,7 @@ import { SleepTimer } from '../components/SleepTimer';
 import { TvOsd } from '../components/TvOsd';
 import { platform } from '../platform';
 import { useTitle } from '../useTitle';
-import { btnGhost, ErrorBox, Spinner } from '../components/ui';
+import { btnGhost, btnQuiet, ErrorBox, Spinner } from '../components/ui';
 
 interface PlayInfo {
   channel: Channel;
@@ -179,18 +179,13 @@ export default function Watch() {
                 <ArrowLeft className="h-5 w-5" />
               </button>
               <div className="min-w-0 flex-1 pt-1.5">
-                <h1 className="break-words text-lg font-bold leading-tight sm:text-xl">
-                  {ch?.kind === 'live' && (
-                    <span className="mr-2 inline-flex translate-y-[-2px] items-center gap-1.5 rounded-md bg-tally px-1.5 py-0.5 align-middle text-[10px] font-bold tracking-wider text-white">
-                      <span className="relative flex h-1.5 w-1.5">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
-                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
-                      </span>
-                      AO VIVO
-                    </span>
-                  )}
-                  {ch?.name || '…'}
-                </h1>
+                {ch?.kind === 'live' && (
+                  // Luz de "no ar" do estúdio: vermelho só aqui.
+                  <span className="mb-1 inline-flex items-center gap-1.5 rounded-[3px] bg-tally px-1.5 py-[3px] text-[11px] font-bold text-white">
+                    <span className="h-1.5 w-1.5 rounded-full bg-white" /> Ao vivo
+                  </span>
+                )}
+                <h1 className="font-display break-words text-[1.75rem] leading-[1.1] text-slate-100 sm:text-[2.1rem]">{ch?.name || '…'}</h1>
                 {ch && (
                   <p className="mt-1 truncate text-sm text-slate-400">
                     {around?.series ? (
@@ -200,30 +195,31 @@ export default function Watch() {
                     ) : (
                       subtitleKind(ch)
                     )}
-                    {ch.group ? `${around?.series || subtitleKind(ch) ? ' · ' : ''}${ch.group}` : ''}
+                    {ch.group ? `${around?.series || subtitleKind(ch) ? ', ' : ''}${ch.group}` : ''}
                   </p>
                 )}
               </div>
             </div>
 
             {ch && (
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-4 flex flex-wrap items-center gap-2">
                 <button type="button" className={btnGhost} onClick={() => go(around?.prev || null)} disabled={!around?.prev} aria-label="Canal anterior">
                   <ChevronLeft className="h-4 w-4" /> <span className="hidden min-[400px]:inline">{around?.series ? 'Ep. anterior' : 'Anterior'}</span>
                 </button>
                 <button type="button" className={btnGhost} onClick={() => go(around?.next || null)} disabled={!around?.next} aria-label="Próximo canal">
                   <span className="hidden min-[400px]:inline">{around?.series ? 'Próximo ep.' : 'Próximo'}</span> <ChevronRight className="h-4 w-4" />
                 </button>
-                <button type="button" className={`${btnGhost} ${ch.favorite ? 'text-brand-light' : ''}`} onClick={fav}>
+                <span className="mx-1 hidden h-6 w-px bg-ink-700 sm:block" />
+                <button type="button" className={`${btnQuiet} ${ch.favorite ? 'text-brand' : ''}`} onClick={fav}>
                   <Heart className={`h-4 w-4 ${ch.favorite ? 'fill-brand text-brand' : ''}`} /> {ch.favorite ? 'Favorito' : 'Favoritar'}
                 </button>
                 <SleepTimer programmeEnd={ch.now?.stop} />
                 {canPip && (
-                  <button type="button" className={btnGhost} onClick={pip} title="Continuar vendo numa janelinha enquanto usa outros apps">
+                  <button type="button" className={btnQuiet} onClick={pip} title="Continuar vendo numa janelinha enquanto usa outros apps">
                     <PictureInPicture2 className="h-4 w-4" /> Mini player
                   </button>
                 )}
-                <button type="button" className={btnGhost} onClick={copy} title="Copiar o link original (para abrir no VLC, por exemplo)">
+                <button type="button" className={btnQuiet} onClick={copy} title="Copiar o link original (para abrir no VLC, por exemplo)">
                   {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />} {copied ? 'Copiado' : 'Copiar link'}
                 </button>
               </div>
