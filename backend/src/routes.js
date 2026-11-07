@@ -1,9 +1,10 @@
-import { Router } from 'express';
+import express, { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma, HttpError } from './db.js';
 import { signToken, publicUser, requireAuth, tooManyAttempts, recordFailure, clearFailures } from './auth.js';
 import { startSync } from './sync.js';
 import { cleanSeconds, resumePoint, watchedFraction } from './progress.js';
+import { buildExport, parseImport } from './favorites-io.js';
 import { serveConversion, startConversion, stopUserConversion } from './convert.js';
 import { sign, verify } from './net.js';
 import { logoLink, probeType, proxyLogo, proxyStream, streamLink, typeFromUrl, xtreamHls } from './stream.js';
@@ -402,6 +403,43 @@ api.delete('/convert/:sid', (req, res) => {
 api.get('/favorites', wrap(async (req, res) => {
   const favs = await prisma.favorite.findMany({ where: { userId: req.user.id }, include: { channel: { select: channelSelect } }, orderBy: { createdAt: 'desc' } });
   res.json({ channels: await decorate(req.user.id, favs.map((f) => f.channel)) });
+}));
+
+// Exportar/importar: o arquivo guarda nome + URL, então funciona entre listas e entre contas.
+api.get('/favorites/export', wrap(async (req, res) => {
+  const favs = await prisma.favorite.findMany({ where: { userId: req.user.id }, include: { channel: true }, orderBy: { createdAt: 'asc' } });
+  res.set('Content-Disposition', `attachment; filename="kesh-tv-favoritos-${new Date().toISOString().slice(0, 10)}.json"`);
+  res.json(buildExport(favs.map((f) => f.channel)));
+}));
+
+api.post('/favorites/import', express.json({ limit: '3mb' }), wrap(async (req, res) => {
+  let items;
+  try {
+    items = parseImport(req.body);
+  } catch (err) {
+    throw new HttpError(400, err.message);
+  }
+  const ids = (await prisma.playlist.findMany({ where: { userId: req.user.id }, select: { id: true } })).map((p) => p.id);
+  let imported = 0;
+  let already = 0;
+  const notFound = [];
+  for (const it of items) {
+    // Mesma URL em alguma lista; senão, mesmo nome (e tipo, se veio) — útil ao trocar de provedor.
+    const ch =
+      (it.url && (await prisma.channel.findFirst({ where: { playlistId: { in: ids }, url: it.url }, select: { id: true } }))) ||
+      (it.name && (await prisma.channel.findFirst({ where: { playlistId: { in: ids }, name: it.name, ...(it.kind ? { kind: it.kind } : {}) }, select: { id: true }, orderBy: { position: 'asc' } })));
+    if (!ch) {
+      notFound.push(it.name || it.url);
+      continue;
+    }
+    const exists = await prisma.favorite.findUnique({ where: { userId_channelId: { userId: req.user.id, channelId: ch.id } } });
+    if (exists) already++;
+    else {
+      await prisma.favorite.create({ data: { userId: req.user.id, channelId: ch.id } });
+      imported++;
+    }
+  }
+  res.json({ imported, already, notFound: notFound.length, missing: notFound.slice(0, 20) });
 }));
 
 api.post('/favorites/:id', wrap(async (req, res) => {

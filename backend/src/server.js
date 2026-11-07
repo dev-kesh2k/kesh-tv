@@ -6,7 +6,7 @@ import { startAutoRefresh } from './sync.js';
 const app = express();
 app.set('trust proxy', true);
 app.disable('x-powered-by');
-app.use((req, res, next) => (req.path.endsWith('/playlists/upload') ? next() : express.json({ limit: '200kb' })(req, res, next)));
+app.use((req, res, next) => (/\/(playlists\/upload|favorites\/import)$/.test(req.path) ? next() : express.json({ limit: '200kb' })(req, res, next)));
 
 // O proxy pode repassar /api/..., o caminho completo /<slug>/api/... ou já sem o prefixo.
 const publicPath = String(process.env.PUBLIC_PATH || '').replace(/\/+$/, '');
