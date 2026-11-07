@@ -189,9 +189,9 @@ Tudo sob `/api` (ou `/<PUBLIC_PATH>/api`). Exceto as rotas marcadas como públic
 
 Achou uma falha? Veja [SECURITY.md](SECURITY.md).
 
-## Rodando localmente (desenvolvimento)
+## Desenvolvimento
 
-Requisitos: Node 22, PostgreSQL e ffmpeg (para a conversão).
+Requisitos: Node 22 (`.nvmrc`), PostgreSQL e ffmpeg (para a conversão).
 
 ```bash
 # backend
@@ -202,13 +202,31 @@ npx prisma migrate deploy
 npm run db:seed               # cria o admin (SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD)
 npm start                     # http://localhost:3000/api/health
 
-# frontend (outro terminal)
+# frontend (outro terminal) — o Vite repassa /api para o backend (BACKEND_URL muda o destino)
 cd frontend
 npm install
-npm run dev
+npm run dev                   # http://localhost:5173
 ```
 
-Com Docker, o `backend/Dockerfile` já traz Node + ffmpeg.
+**Testes e checagens** (o mesmo que o CI roda em todo PR):
+
+```bash
+cd backend && npm run build && npm test     # sintaxe + testes (node:test)
+cd frontend && npx tsc -b && npx vite build # tipos + build
+```
+
+Os testes cobrem o leitor M3U e XMLTV, links assinados e proxy HLS, bloqueio de rede interna (IPv4/IPv6, DNS rebinding), sandbox do proxy, progresso, exportação de favoritos, limite de login e a leitura de cabeçalhos MKV/AVI.
+
+**Estrutura**
+
+```
+backend/    API Express + Prisma (src/, prisma/ com migrações, test/), Dockerfile com ffmpeg
+frontend/   React + Vite + Tailwind (src/pages, src/components, platform/spatial/tvScale para TV)
+android/    app Android (WebView) + build-apk.sh (gerador de APK)
+deploy/docker/  instalação com docker compose
+docs/       prints e imagem de prévia
+.github/    CI, deploy, APK Android, Dependabot, modelos de issue/PR
+```
 
 ## Configuração
 
