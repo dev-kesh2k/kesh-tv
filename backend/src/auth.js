@@ -30,14 +30,23 @@ export async function requireAuth(req, res, next) {
   }
 }
 
+/**
+ * IP do visitante para o limite de tentativas. Atrás do Cloudflare (TRUST_CLOUDFLARE=1) usa o CF-Connecting-IP,
+ * que o visitante não consegue forjar; sem ele, o endereço da conexão (X-Forwarded-For de fora não é confiável).
+ */
+export function clientIp(req) {
+  const cf = process.env.TRUST_CLOUDFLARE === '1' ? String(req.headers['cf-connecting-ip'] || '').trim() : '';
+  return cf || req.ip || req.socket?.remoteAddress || '';
+}
+
 // Limite simples de tentativas de login por IP+e-mail (memória do processo).
 const attempts = new Map();
 const WINDOW = 15 * 60_000;
-export function tooManyAttempts(key) {
+export function tooManyAttempts(key, max = 10) {
   const now = Date.now();
   const list = (attempts.get(key) || []).filter((t) => now - t < WINDOW);
   attempts.set(key, list);
-  return list.length >= 10;
+  return list.length >= max;
 }
 export function recordFailure(key) {
   const list = attempts.get(key) || [];
