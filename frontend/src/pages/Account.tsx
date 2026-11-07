@@ -97,7 +97,13 @@ interface StatsData {
   hoursWatched: number;
 }
 
-const APK_URL = 'https://github.com/dev-kesh2k/kesh-tv/releases/latest/download/kesh-tv.apk';
+const APK_BASE = 'https://github.com/dev-kesh2k/kesh-tv/releases/latest/download/';
+/** As três versões do app Android (mesma assinatura; podem ficar instaladas juntas). */
+const APKS = [
+  { file: 'kesh-tv.apk', name: 'Padrão', note: 'O site dentro de um app. O mais leve, sempre igual ao site.' },
+  { file: 'kesh-tv-kotlin.apk', name: 'Nativo (Kotlin)', note: 'Player do próprio Android: abre mais formatos direto no aparelho.' },
+  { file: 'kesh-tv-flutter.apk', name: 'Flutter', note: 'Versão alternativa, também com player nativo.' },
+];
 
 /** App Android (celular e Android TV): download no navegador; dentro do app mostra a versão instalada. */
 function AndroidAppSection() {
@@ -122,9 +128,19 @@ function AndroidAppSection() {
           <p className="mt-1 text-sm text-slate-400">
             Para celular e Android TV (TV Box, Fire TV, Chromecast com Google TV). No aparelho, permita “instalar apps de fontes desconhecidas”.
           </p>
-          <a href={APK_URL} className={`${btnPrimary} mt-3`}>
-            <Download className="h-4 w-4" /> Baixar app Android
-          </a>
+          <ul className="mt-3 divide-y divide-ink-800 border-y border-ink-800">
+            {APKS.map((a, i) => (
+              <li key={a.file} className="flex flex-wrap items-center gap-3 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-slate-100">{a.name}</p>
+                  <p className="text-sm text-slate-400">{a.note}</p>
+                </div>
+                <a href={APK_BASE + a.file} className={i === 0 ? btnPrimary : btnGhost}>
+                  <Download className="h-4 w-4" /> Baixar
+                </a>
+              </li>
+            ))}
+          </ul>
         </>
       )}
     </section>
