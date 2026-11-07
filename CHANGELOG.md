@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-07 (manhã) — apps nativos
+
+- **App Android nativo em Kotlin** (`android-kotlin/`): Jetpack Compose, player Media3/ExoPlayer que toca o link original no aparelho e cai para o servidor se falhar; login, abas, grupos, busca, grade de programação, séries com temporadas, favoritos, vistos por último, retomada e troca de canal pelo controle.
+- **App em Flutter** (`flutter/`): as mesmas telas, com `video_player`; tela acesa durante o vídeo por um canal nativo; projeto iOS incluído.
+- **Gerador de APK com três opções** (`./build-apk.sh`: WebView, Kotlin, Flutter ou todos), mesma assinatura nos três.
+- Workflow *APK Android* com a escolha do app e Release com `kesh-tv.apk`, `kesh-tv-kotlin.apk` e `kesh-tv-flutter.apk` (versão 1.2.0); em PRs compila só o app que mudou.
+- Conta: download das três versões.
+
 ## 2026-11-07 (madrugada) — visual novo
 
 O app deixou o tema genérico (preto + rosa, cartões arredondados iguais) por uma identidade de TV:
