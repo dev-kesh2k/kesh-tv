@@ -64,4 +64,6 @@ class Api(server: String, private val token: () -> String?) {
   suspend fun favorites() = Parse.channels(api, call("GET", "favorites")).items
   suspend fun setFavorite(id: String, on: Boolean) { call(if (on) "POST" else "DELETE", "favorites/$id", if (on) JSONObject() else null) }
   suspend fun history() = Parse.channels(api, call("GET", "history")).items
+  suspend fun playlists() = Parse.playlists(call("GET", "playlists"))
+  suspend fun refreshPlaylist(id: String) { call("POST", "playlists/$id/refresh", JSONObject()) }
 }

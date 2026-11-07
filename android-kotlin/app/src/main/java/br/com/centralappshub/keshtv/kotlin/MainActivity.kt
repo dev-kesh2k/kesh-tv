@@ -26,7 +26,7 @@ class MainActivity : ComponentActivity() {
   }
 }
 
-/** Telas: login → canais (abas e grupos) → série → player; favoritos e conta. */
+/** Telas: login → abas Canais / Favoritos / Recentes / Listas / Conta → série → player. */
 @Composable
 fun KeshApp(store: Store) {
   var token by remember { mutableStateOf(store.token) }
@@ -37,24 +37,30 @@ fun KeshApp(store: Store) {
   val api = remember(token) { Api(store.server) { store.token } }
   val logout = { store.token = null; token = null }
   val nav = rememberNavController()
+  // Trocar de aba não empilha telas: "voltar" em qualquer aba leva para Canais e de lá sai do app.
+  val goTab: (Tab) -> Unit = { t ->
+    nav.navigate(t.route) { popUpTo(Tab.Canais.route) { saveState = true }; launchSingleTop = true; restoreState = true }
+  }
   Box(Modifier.fillMaxSize().background(Kesh.Ink)) {
-    NavHost(nav, startDestination = "home") {
-      composable("home") {
-        HomeScreen(
-          api,
-          onOpen = { c -> nav.navigate("player/${c.id}") },
-          onSeries = { s -> nav.navigate("series/${s.playlistId}/${Uri.encode(s.name)}") },
-          onFavorites = { nav.navigate("favorites") },
-          onAccount = { nav.navigate("account") },
-          onUnauthorized = logout,
-        )
+    NavHost(nav, startDestination = Tab.Canais.route) {
+      composable(Tab.Canais.route) {
+        TabShell(Tab.Canais, goTab) {
+          HomeScreen(
+            api,
+            onOpen = { c -> nav.navigate("player/${c.id}") },
+            onSeries = { s -> nav.navigate("series/${s.playlistId}/${Uri.encode(s.name)}") },
+            onUnauthorized = logout,
+          )
+        }
       }
+      composable(Tab.Favoritos.route) { TabShell(Tab.Favoritos, goTab) { FavoritesScreen(api, onOpen = { c -> nav.navigate("player/${c.id}") }) } }
+      composable(Tab.Recentes.route) { TabShell(Tab.Recentes, goTab) { RecentScreen(api, onOpen = { c -> nav.navigate("player/${c.id}") }) } }
+      composable(Tab.Listas.route) { TabShell(Tab.Listas, goTab) { PlaylistsScreen(api) } }
+      composable(Tab.Conta.route) { TabShell(Tab.Conta, goTab) { AccountScreen(api, store, onLogout = logout) } }
       composable("series/{pl}/{name}") { e ->
         SeriesScreen(api, e.arguments!!.getString("pl")!!, Uri.decode(e.arguments!!.getString("name")!!), onOpen = { nav.navigate("player/$it") }, onBack = { nav.popBackStack() })
       }
       composable("player/{id}") { e -> PlayerScreen(api, e.arguments!!.getString("id")!!, onBack = { nav.popBackStack() }) }
-      composable("favorites") { FavoritesScreen(api, onOpen = { c -> nav.navigate("player/${c.id}") }, onBack = { nav.popBackStack() }) }
-      composable("account") { AccountScreen(api, store, onLogout = logout, onBack = { nav.popBackStack() }) }
     }
   }
 }

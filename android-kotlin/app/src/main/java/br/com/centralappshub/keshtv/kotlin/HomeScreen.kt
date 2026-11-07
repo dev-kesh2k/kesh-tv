@@ -22,13 +22,8 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AccountCircle
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -50,7 +45,7 @@ private val KINDS = listOf("live" to "Ao vivo", "movie" to "Filmes", "series" to
 private const val ALL = "__all"
 
 @Composable
-fun HomeScreen(api: Api, onOpen: (Channel) -> Unit, onSeries: (Series) -> Unit, onFavorites: () -> Unit, onAccount: () -> Unit, onUnauthorized: () -> Unit) {
+fun HomeScreen(api: Api, onOpen: (Channel) -> Unit, onSeries: (Series) -> Unit, onUnauthorized: () -> Unit) {
   var kind by remember { mutableStateOf("live") }
   var group by remember { mutableStateOf(ALL) }
   var query by remember { mutableStateOf("") }
@@ -92,11 +87,6 @@ fun HomeScreen(api: Api, onOpen: (Channel) -> Unit, onSeries: (Series) -> Unit, 
   }
 
   Column(Modifier.fillMaxSize().background(Kesh.Ink)) {
-    Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-      Text("Kesh TV", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-      IconButton(onClick = onFavorites, modifier = Modifier.focusRing()) { Icon(Icons.Outlined.FavoriteBorder, "Favoritos") }
-      IconButton(onClick = onAccount, modifier = Modifier.focusRing()) { Icon(Icons.Outlined.AccountCircle, "Conta") }
-    }
     OutlinedTextField(
       query, { query = it }, singleLine = true, placeholder = { Text("Buscar canal, filme ou série") },
       modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).focusRing(),
