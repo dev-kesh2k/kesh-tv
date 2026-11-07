@@ -62,15 +62,30 @@
 ## Como funciona
 
 ```
-navegador ──► frontend (React + Vite + Tailwind)
-                 │  /api
-                 ▼
-             backend (Express + Prisma) ──► PostgreSQL (listas, canais, favoritos)
-                 │
-                 ├─ /api/stream   proxy dos streams (reescreve playlists HLS)
-                 ├─ /api/logo     proxy das logos (cache 7 dias)
-                 └─ /api/convert  ffmpeg → HLS para formatos que o navegador não toca
+ navegador / app Android / TV
+            │
+            ▼
+ frontend  (React + Vite + Tailwind — frontend/)
+            │  /api/...
+            ▼
+ backend   (Express + Prisma — backend/src/)
+   ├─ routes.js      rotas da API (login, listas, canais, séries, favoritos, histórico)
+   ├─ sync.js        importação das listas em fluxo + atualização automática
+   ├─ m3u.js         leitor M3U (atributos, grupos, séries SxxEyy, busca sem acento)
+   ├─ epg.js/xmltv.js guia de programação (XMLTV em fluxo, agora/a seguir)
+   ├─ stream.js      proxy de streams e logos (reescreve playlists HLS)
+   ├─ convert.js     ffmpeg → HLS para formatos que o navegador não toca
+   ├─ net.js         rede segura (bloqueio de endereços internos, links assinados)
+   └─ auth.js        login (JWT com versão de senha) e limite de tentativas
+            │
+            ▼
+ PostgreSQL  (usuários, listas, canais, programas, favoritos, histórico)
 ```
+
+- **Listas**: o arquivo é lido linha a linha enquanto baixa e gravado em lotes de 2000 (`INSERT … ON CONFLICT`), então listas de centenas de milhares de itens cabem em pouca memória. Canais que continuam na lista mantêm o id — favoritos e recentes não se perdem.
+- **Reprodução**: `GET /channels/:id/play` devolve as fontes em ordem de tentativa; o player passa para a próxima se uma falhar (ou não começar a tempo).
+- **Proxy**: streams `http://`, sem CORS ou com cabeçalhos próprios passam por `/api/stream` com **links assinados** (HMAC + validade), porque `<video>` e `<img>` não mandam o token de login.
+- **Conversão**: arquivos que o navegador não toca viram HLS na hora; H.264 de 8 bits só é reempacotado (quase sem CPU), o resto vira H.264. O ffmpeg pausa quando está ~3 min à frente do que está sendo assistido.
 
 ## Instalação rápida (Docker)
 
