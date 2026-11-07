@@ -18,6 +18,24 @@
 
 > O app não vem com canais: você usa a sua própria lista M3U (link ou arquivo).
 
+<p align="center">
+  <img src="docs/screenshots/desktop-canais.png" width="72%" alt="Canais ao vivo no computador" />
+  <img src="docs/screenshots/celular-canais.png" width="24%" alt="Canais ao vivo no celular" />
+</p>
+
+<details>
+<summary><b>Mais telas</b></summary>
+
+| Player | Séries | Filmes |
+| --- | --- | --- |
+| <img src="docs/screenshots/celular-player.png" alt="Player no celular" /> | <img src="docs/screenshots/celular-serie.png" alt="Temporadas e episódios" /> | <img src="docs/screenshots/celular-filmes.png" alt="Filmes" /> |
+
+<img src="docs/screenshots/desktop-player.png" alt="Player no computador" />
+<img src="docs/screenshots/desktop-series.png" alt="Séries no computador" />
+
+<sub>Telas com uma lista de demonstração (vídeos de teste livres e imagens genéricas).</sub>
+</details>
+
 ## Recursos
 
 - **Listas por link ou arquivo** — importação em fluxo, aguenta listas enormes (testado com 364 mil itens / 95 MB em ~45 s e ~190 MB de memória); atualização automática diária; reimportar mantém favoritos e recentes.
