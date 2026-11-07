@@ -1,16 +1,22 @@
 name: APK Android
 
-# Gera o APK (celular e Android TV):
-#  - em PRs que mexem em android/: só compila (checagem);
-#  - manualmente (Actions → APK Android → Run workflow) ou ao criar uma tag v1.2.3:
-#    compila assinado e publica numa Release com kesh-tv.apk.
+# Gera os APKs (celular e Android TV) em três versões: WebView, Kotlin nativo e Flutter.
+#  - em PRs que mexem nos apps: só compila o que mudou (checagem);
+#  - manualmente (Actions → APK Android → Run workflow): escolha qual gerar e a versão;
+#  - ao criar uma tag v1.2.3: gera os três.
+# Os assinados vão para uma Release: kesh-tv.apk, kesh-tv-kotlin.apk e kesh-tv-flutter.apk.
 on:
   push:
     tags: ['v*']
   pull_request:
-    paths: ['android/**', '.github/workflows/android.yml']
+    paths: ['android/**', 'android-kotlin/**', 'flutter/**', '.github/workflows/android.yml']
   workflow_dispatch:
     inputs:
+      app:
+        description: 'Qual APK gerar'
+        type: choice
+        options: [todos, webview, kotlin, flutter]
+        default: todos
       version:
         description: 'Versão (ex.: 1.2.0)'
         required: true
@@ -20,61 +26,118 @@ permissions:
   contents: write
 
 jobs:
-  apk:
+  plan:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: android
+    outputs:
+      webview: ${{ steps.p.outputs.webview }}
+      kotlin: ${{ steps.p.outputs.kotlin }}
+      flutter: ${{ steps.p.outputs.flutter }}
+      version: ${{ steps.p.outputs.version }}
+      code: ${{ steps.p.outputs.code }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
         with:
-          distribution: temurin
-          java-version: '17'
-          cache: gradle
-
-      - name: Versão
-        id: v
+          fetch-depth: 0
+      - id: p
         run: |
-          V="${{ github.event.inputs.version }}"
+          APP="${{ github.event.inputs.app }}"; V="${{ github.event.inputs.version }}"
           [ -n "$V" ] || V="${GITHUB_REF_NAME#v}"
-          [ "${{ github.event_name }}" = pull_request ] && V="0.0.0-pr${{ github.event.number }}"
-          echo "name=$V" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            V="0.0.0-pr${{ github.event.number }}"
+            CHANGED="$(git diff --name-only "${{ github.event.pull_request.base.sha }}" HEAD)"
+            for k in webview:android/ kotlin:android-kotlin/ flutter:flutter/; do
+              echo "${k%%:*}=$(echo "$CHANGED" | grep -qE "^(${k#*:}|\.github/workflows/android\.yml)" && echo true || echo false)" >> "$GITHUB_OUTPUT"
+            done
+          else
+            for k in webview kotlin flutter; do
+              echo "$k=$([ -z "$APP" ] || [ "$APP" = todos ] || [ "$APP" = "$k" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+            done
+          fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
           echo "code=$(date +%s | cut -c1-9)" >> "$GITHUB_OUTPUT"
 
+  gradle:
+    needs: plan
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - { app: webview, dir: android, apk: kesh-tv }
+          - { app: kotlin, dir: android-kotlin, apk: kesh-tv-kotlin }
+    steps:
+      - uses: actions/checkout@v4
+        if: needs.plan.outputs[matrix.app] == 'true'
+      - uses: actions/setup-java@v4
+        if: needs.plan.outputs[matrix.app] == 'true'
+        with: { distribution: temurin, java-version: '17', cache: gradle }
       - name: Chave de assinatura
-        if: github.event_name != 'pull_request'
-        env:
-          KEYSTORE_B64: ${{ secrets.KESH_KEYSTORE_B64 }}
+        if: needs.plan.outputs[matrix.app] == 'true' && github.event_name != 'pull_request'
+        env: { KEYSTORE_B64: '${{ secrets.KESH_KEYSTORE_B64 }}' }
         run: |
           [ -n "$KEYSTORE_B64" ] || { echo "::error::Defina o segredo KESH_KEYSTORE_B64"; exit 1; }
           echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/kesh-tv.jks"
           echo "KESH_KEYSTORE=$RUNNER_TEMP/kesh-tv.jks" >> "$GITHUB_ENV"
-
       - name: Compilar
-        env:
-          KESH_KEYSTORE_PASSWORD: ${{ secrets.KESH_KEYSTORE_PASSWORD }}
+        if: needs.plan.outputs[matrix.app] == 'true'
+        working-directory: ${{ matrix.dir }}
+        env: { KESH_KEYSTORE_PASSWORD: '${{ secrets.KESH_KEYSTORE_PASSWORD }}' }
         run: |
-          ./gradlew --no-daemon assembleRelease -PversionName="${{ steps.v.outputs.name }}" -PversionCode="${{ steps.v.outputs.code }}"
-          mkdir -p dist
-          cp app/build/outputs/apk/release/app-release.apk "dist/kesh-tv-${{ steps.v.outputs.name }}.apk"
-          cp app/build/outputs/apk/release/app-release.apk dist/kesh-tv.apk
-
+          ./gradlew --no-daemon assembleRelease -PversionName="${{ needs.plan.outputs.version }}" -PversionCode="${{ needs.plan.outputs.code }}"
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/dist/${{ matrix.apk }}.apk"
       - uses: actions/upload-artifact@v4
-        with:
-          name: kesh-tv-${{ steps.v.outputs.name }}
-          path: android/dist/kesh-tv-${{ steps.v.outputs.name }}.apk
+        if: needs.plan.outputs[matrix.app] == 'true'
+        with: { name: '${{ matrix.apk }}', path: 'dist/${{ matrix.apk }}.apk' }
 
-      - name: Publicar na Release
+  flutter:
+    needs: plan
+    if: needs.plan.outputs.flutter == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: flutter
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: subosito/flutter-action@v2
+        with: { flutter-version: '3.24.5', cache: true }
+      - run: flutter pub get && flutter analyze && flutter test
+      - name: Chave de assinatura
         if: github.event_name != 'pull_request'
-        uses: softprops/action-gh-release@v2
+        env: { KEYSTORE_B64: '${{ secrets.KESH_KEYSTORE_B64 }}' }
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/kesh-tv.jks"
+          echo "KESH_KEYSTORE=$RUNNER_TEMP/kesh-tv.jks" >> "$GITHUB_ENV"
+      - name: Compilar
+        env: { KESH_KEYSTORE_PASSWORD: '${{ secrets.KESH_KEYSTORE_PASSWORD }}' }
+        run: |
+          flutter build apk --release --build-name="${{ needs.plan.outputs.version }}" --build-number="${{ needs.plan.outputs.code }}"
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          cp build/app/outputs/flutter-apk/app-release.apk "$GITHUB_WORKSPACE/dist/kesh-tv-flutter.apk"
+      - uses: actions/upload-artifact@v4
+        with: { name: kesh-tv-flutter, path: dist/kesh-tv-flutter.apk }
+
+  release:
+    needs: [plan, gradle, flutter]
+    if: always() && github.event_name != 'pull_request' && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: dist, merge-multiple: true }
+      - run: ls -lh dist
+      - uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.v.outputs.name }}
-          name: Kesh TV ${{ steps.v.outputs.name }}
+          tag_name: v${{ needs.plan.outputs.version }}
+          name: Kesh TV ${{ needs.plan.outputs.version }}
           body: |
-            App Android do Kesh TV (celular e Android TV).
-            Baixe **kesh-tv.apk** e abra no aparelho (permita "instalar apps desconhecidos").
-          files: |
-            android/dist/kesh-tv.apk
-            android/dist/kesh-tv-${{ steps.v.outputs.name }}.apk
+            App Android do Kesh TV (celular e Android TV), em três versões — instale a que preferir
+            (permita "instalar apps desconhecidos"):
+
+            - **kesh-tv.apk** — WebView: o site dentro de um app, o mais leve.
+            - **kesh-tv-kotlin.apk** — nativo em Kotlin (Jetpack Compose + Media3), toca mais formatos direto no aparelho.
+            - **kesh-tv-flutter.apk** — em Flutter.
+
+            As três usam a mesma assinatura e podem ficar instaladas juntas.
+          files: dist/*.apk
           make_latest: true
