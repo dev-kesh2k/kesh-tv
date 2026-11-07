@@ -162,6 +162,9 @@ export async function startConversion({ url, ua, ref, offset, userId }) {
   await assertPublic(url);
   const info = await probe(url, ua, ref);
   const copy = info.vcodec === 'h264' && (!info.pix || /^(yuv420p|yuvj420p|nv12)$/.test(info.pix));
+  // Confere os limites de novo: a leitura do arquivo leva segundos e outra conversão pode ter começado.
+  for (const [sid, s] of sessions) if (s.userId === userId) stop(sid);
+  if (sessions.size >= MAX_SESSIONS) throw new HttpError(503, 'Servidor ocupado com outras conversões. Tente em instantes.');
   if (!copy && [...sessions.values()].filter((s) => !s.copy).length >= MAX_ENCODES)
     throw new HttpError(503, 'Já há conversões de vídeo em andamento. Tente em instantes.');
 
