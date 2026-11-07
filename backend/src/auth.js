@@ -5,12 +5,13 @@ const SECRET = process.env.JWT_SECRET || '';
 if (!SECRET) console.warn('JWT_SECRET não definido: usando segredo temporário (sessões caem ao reiniciar).');
 const KEY = SECRET || `tmp-${Math.random().toString(36).slice(2)}${Date.now()}`;
 
+// O token leva a "versão" da senha: trocar a senha (ou sair de todos os aparelhos) invalida os tokens antigos.
 export function signToken(user) {
-  return jwt.sign({ sub: user.id }, KEY, { expiresIn: '30d' });
+  return jwt.sign({ sub: user.id, v: user.tokenVersion || 0 }, KEY, { expiresIn: '30d' });
 }
 
 export function publicUser(u) {
-  const { passwordHash, ...rest } = u;
+  const { passwordHash, tokenVersion, ...rest } = u;
   return rest;
 }
 
@@ -19,9 +20,9 @@ export async function requireAuth(req, res, next) {
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
   if (!token) return res.status(401).json({ error: 'Não autenticado' });
   try {
-    const { sub } = jwt.verify(token, KEY);
+    const { sub, v } = jwt.verify(token, KEY);
     const user = await prisma.user.findUnique({ where: { id: sub } });
-    if (!user) return res.status(401).json({ error: 'Sessão inválida' });
+    if (!user || (v || 0) !== user.tokenVersion) return res.status(401).json({ error: 'Sessão encerrada. Entre de novo.' });
     req.user = user;
     next();
   } catch {
