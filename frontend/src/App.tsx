@@ -18,7 +18,7 @@ export default function App() {
     return (
       <div className="grid min-h-[100dvh] place-items-center px-6 text-center">
         <div className="max-w-sm">
-          <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-ink-800 text-slate-400">
+          <div className="mx-auto mb-4 grid place-items-center text-slate-500">
             <WifiOff className="h-8 w-8" />
           </div>
           <h1 className="text-xl font-semibold">Sem conexão</h1>

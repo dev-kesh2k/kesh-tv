@@ -137,7 +137,7 @@ export function SeriesCard({ series }: { series: Series }) {
       <div className="min-h-[52px] pt-2">
         <p className="line-clamp-2 text-[13px] font-medium leading-snug text-slate-100">{series.name}</p>
         <p className="mt-0.5 truncate text-[11px] text-slate-500">
-          {series.seasons > 1 ? `${series.seasons} temporadas · ` : ''}
+          {series.seasons > 1 ? `${series.seasons} temporadas, ` : ''}
           {series.episodes} {series.episodes === 1 ? 'episódio' : 'episódios'}
         </p>
       </div>
