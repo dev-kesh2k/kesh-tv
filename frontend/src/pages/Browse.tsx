@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ChevronDown, EyeOff, Layers, ListVideo, Search, Tv, X } from 'lucide-react';
 import { api, Channel, Group, Kind, KIND_LABEL, Playlist, Series, useApi } from '../api';
-import { ChannelGrid, SeriesGrid, SkeletonGrid } from '../components/ChannelCard';
+import { ChannelGrid, SeriesGrid, Shelf, SkeletonGrid } from '../components/ChannelCard';
 import { Logo, Page } from '../components/Layout';
 import { btnPrimary, Empty, ErrorBox, input, Spinner } from '../components/ui';
 import { useTitle } from '../useTitle';
@@ -73,6 +73,8 @@ export default function Browse() {
   useTitle(q ? `Busca: ${q}` : group !== ALL ? `${group || 'Sem grupo'} · ${KIND_LABEL[kind]}` : KIND_LABEL[kind]);
 
   const { data: pls, loading: plLoading } = useApi<{ playlists: Playlist[] }>('playlists');
+  const { data: favs } = useApi<{ channels: Channel[] }>('favorites');
+  const { data: hist } = useApi<{ channels: Channel[] }>('history');
   const playlists = pls?.playlists || [];
   const counts = useMemo(
     () => ({
@@ -202,6 +204,12 @@ export default function Browse() {
     );
 
   const groups = gdata?.groups || [];
+  // Atalhos no topo (só na visão "Todos"): favoritos ao vivo e o que ficou pela metade em filmes/séries.
+  const showShelf = !q && group === ALL;
+  const shelf =
+    kind === 'live'
+      ? (favs?.channels || []).filter((c) => c.kind === 'live')
+      : (hist?.channels || []).filter((c) => c.kind === kind && (c.progress || 0) > 0 && (c.progress || 0) < 1);
   const groupLabel = group === ALL ? 'Todos os grupos' : group || 'Sem grupo';
 
   return (
@@ -253,6 +261,7 @@ export default function Browse() {
             </button>
           )}
           {q && <p className="mb-3 text-sm text-slate-400">Resultados para “{q}”</p>}
+          {showShelf && <Shelf title={kind === 'live' ? 'Seus favoritos' : 'Continuar assistindo'} channels={shelf.slice(0, 20)} />}
           <ErrorBox message={error} />
           {series.length > 0 && (
             <>
