@@ -68,9 +68,8 @@ a:focus-visible {
 html.is-tv #root {
   padding: 20px 32px;
 }
-html.is-tv .tv-sidebar {
+html.is-tv .tv-topbar {
   top: 20px;
-  height: calc(100dvh - 40px);
   border: 1px solid #181d29;
   border-radius: 1rem;
 }
