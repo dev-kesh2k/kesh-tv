@@ -72,6 +72,29 @@ docker compose -f deploy/docker/compose.yml up -d --build
 
 Abra **http://localhost:8080**, entre com `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` e adicione sua lista em **Listas**.
 
+## App Android (celular e Android TV)
+
+[**⬇️ Baixar kesh-tv.apk**](https://github.com/dev-kesh2k/kesh-tv/releases/latest/download/kesh-tv.apk) — funciona em celulares e em Android TV (TV Box, Fire TV, Chromecast com Google TV), com ícone na tela inicial da TV, navegação pelo controle remoto e escala automática para TVs de 32" a 100".
+
+### Gerar o APK
+
+- **Pelo GitHub:** Actions → *APK Android* → *Run workflow* (ou crie uma tag `v1.2.3`). Publica uma Release com `kesh-tv.apk`. A assinatura usa os segredos `KESH_KEYSTORE_B64` e `KESH_KEYSTORE_PASSWORD`.
+- **Na sua máquina (só precisa de Docker):**
+
+  ```bash
+  android/build-apk.sh 1.2.0                                   # aponta para o servidor padrão
+  android/build-apk.sh 1.2.0 https://meu-servidor/kesh-tv/     # seu próprio servidor
+  ```
+
+  Na primeira vez cria a chave de assinatura em `android/keystore/` (fora do git). **Guarde uma cópia**: sem a mesma chave as próximas versões não instalam por cima.
+
+O app é um WebView que abre o Kesh TV publicado: atualizações do site chegam sem reinstalar. Ele informa ao site que está numa TV (modo TV automático) e mantém a tela acesa durante o vídeo.
+
+## Na TV pelo navegador / iPhone
+
+- **Modo TV**: reconhecido sozinho em Android TV, Fire TV, Samsung (Tizen) e LG (webOS); dá para forçar em Conta → Modo TV ou com `?tv=1`. Controle: setas navegam, OK abre/pausa, Voltar retorna.
+- **iPhone/iPad**: Safari → Compartilhar → *Adicionar à Tela de Início* (abre em tela cheia, como app).
+
 ## Rodando localmente (desenvolvimento)
 
 Requisitos: Node 22, PostgreSQL e ffmpeg (para a conversão).
