@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Film, Heart, Clapperboard, Tv } from 'lucide-react';
-import { apiUrl, Channel, toggleFavorite } from '../api';
+import { apiUrl, Channel, Series, seriesLink, toggleFavorite } from '../api';
 
 const KIND_ICON = { live: Tv, movie: Film, series: Clapperboard };
 
@@ -19,7 +19,7 @@ export function ChannelLogo({ channel, className = '' }: { channel: Channel; cla
           loading="lazy"
           onLoad={() => setState('ok')}
           onError={() => setState('failed')}
-          className={`absolute inset-0 m-auto max-h-[78%] max-w-[78%] object-contain transition-opacity ${state === 'ok' ? 'opacity-100' : 'opacity-0'}`}
+          className={`absolute inset-0 m-auto transition-opacity ${channel.kind === 'live' ? 'max-h-[78%] max-w-[78%] object-contain' : 'h-full w-full object-cover'} ${state === 'ok' ? 'opacity-100' : 'opacity-0'}`}
         />
       )}
     </div>
@@ -68,6 +68,35 @@ export function ChannelGrid({ channels, onChange }: { channels: Channel[]; onCha
     <div className="grid grid-cols-2 gap-2.5 min-[480px]:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 sm:gap-3">
       {channels.map((c) => (
         <ChannelCard key={c.id} channel={c} onChange={onChange} />
+      ))}
+    </div>
+  );
+}
+
+export function SeriesCard({ series }: { series: Series }) {
+  const fake = { id: '', name: series.name, group: series.group, kind: 'series', playlistId: series.playlistId, logo: series.logo, favorite: false } as Channel;
+  return (
+    <Link
+      to={seriesLink(series)}
+      className="group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-ink-700/60 bg-ink-900 transition hover:border-brand/60 hover:bg-ink-850 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
+    >
+      <ChannelLogo channel={fake} className="aspect-[3/4] w-full" />
+      <div className="min-h-[52px] p-2.5">
+        <p className="line-clamp-2 text-[13px] font-medium leading-snug text-slate-100">{series.name}</p>
+        <p className="mt-0.5 truncate text-[11px] text-slate-500">
+          {series.seasons > 1 ? `${series.seasons} temporadas · ` : ''}
+          {series.episodes} {series.episodes === 1 ? 'episódio' : 'episódios'}
+        </p>
+      </div>
+    </Link>
+  );
+}
+
+export function SeriesGrid({ series }: { series: Series[] }) {
+  return (
+    <div className="grid grid-cols-2 gap-2.5 min-[480px]:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 sm:gap-3">
+      {series.map((s) => (
+        <SeriesCard key={`${s.playlistId}|${s.name}`} series={s} />
       ))}
     </div>
   );

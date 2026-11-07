@@ -8,6 +8,7 @@ import Watch from './pages/Watch';
 import { Favorites, Recent } from './pages/Saved';
 import Playlists from './pages/Playlists';
 import Account from './pages/Account';
+import SeriesPage from './pages/SeriesPage';
 
 export default function App() {
   const { user, ready } = useAuth();
@@ -18,6 +19,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route index element={<Browse />} />
         <Route path="assistir/:id" element={<Watch />} />
+        <Route path="serie/:playlistId" element={<SeriesPage />} />
         <Route path="favoritos" element={<Favorites />} />
         <Route path="recentes" element={<Recent />} />
         <Route path="listas" element={<Playlists />} />

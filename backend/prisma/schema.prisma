@@ -35,6 +35,7 @@ model Playlist {
   error        String?
   syncedAt     DateTime?
   syncStarted  DateTime?
+  syncProgress Int       @default(0)
   createdAt    DateTime  @default(now())
   channels     Channel[]
 
@@ -54,12 +55,16 @@ model Channel {
   userAgent  String     @default("")
   referrer   String     @default("")
   position   Int        @default(0)
+  seriesName String     @default("")
+  season     Int        @default(0)
+  episode    Int        @default(0)
   syncId     String     @default("")
   favorites  Favorite[]
   history    History[]
 
   @@unique([playlistId, url])
   @@index([playlistId, kind, groupTitle, position])
+  @@index([playlistId, seriesName, season, episode])
 }
 
 model Favorite {

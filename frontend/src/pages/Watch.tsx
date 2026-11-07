@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, Heart } from 'lucide-react';
-import { api, Channel, KIND_LABEL, Source, toggleFavorite } from '../api';
+import { api, Channel, KIND_LABEL, seriesLink, Source, toggleFavorite } from '../api';
 import { ChannelLogo } from '../components/ChannelCard';
 import { Player } from '../components/Player';
 import { btnGhost, ErrorBox, Spinner } from '../components/ui';
@@ -15,6 +15,7 @@ interface Around {
   channels: Channel[];
   prev: string | null;
   next: string | null;
+  series?: string;
 }
 
 export default function Watch() {
@@ -102,7 +103,13 @@ export default function Watch() {
                 <h1 className="break-words text-lg font-bold leading-tight sm:text-xl">{ch?.name || '…'}</h1>
                 {ch && (
                   <p className="mt-1 truncate text-sm text-slate-400">
-                    {KIND_LABEL[ch.kind]}
+                    {around?.series ? (
+                      <Link to={seriesLink({ playlistId: ch.playlistId, name: around.series })} className="text-brand-light hover:underline">
+                        {around.series}
+                      </Link>
+                    ) : (
+                      KIND_LABEL[ch.kind]
+                    )}
                     {ch.group ? ` · ${ch.group}` : ''}
                   </p>
                 )}
@@ -112,10 +119,10 @@ export default function Watch() {
             {ch && (
               <div className="mt-3 flex flex-wrap gap-2">
                 <button type="button" className={btnGhost} onClick={() => go(around?.prev || null)} disabled={!around?.prev} aria-label="Canal anterior">
-                  <ChevronLeft className="h-4 w-4" /> <span className="hidden min-[400px]:inline">Anterior</span>
+                  <ChevronLeft className="h-4 w-4" /> <span className="hidden min-[400px]:inline">{around?.series ? 'Ep. anterior' : 'Anterior'}</span>
                 </button>
                 <button type="button" className={btnGhost} onClick={() => go(around?.next || null)} disabled={!around?.next} aria-label="Próximo canal">
-                  <span className="hidden min-[400px]:inline">Próximo</span> <ChevronRight className="h-4 w-4" />
+                  <span className="hidden min-[400px]:inline">{around?.series ? 'Próximo ep.' : 'Próximo'}</span> <ChevronRight className="h-4 w-4" />
                 </button>
                 <button type="button" className={`${btnGhost} ${ch.favorite ? 'text-brand-light' : ''}`} onClick={fav}>
                   <Heart className={`h-4 w-4 ${ch.favorite ? 'fill-brand text-brand' : ''}`} /> {ch.favorite ? 'Favorito' : 'Favoritar'}
@@ -130,7 +137,7 @@ export default function Watch() {
 
         {around && around.channels.length > 1 && (
           <aside className="mt-5 px-3 sm:px-0 xl:mt-0 xl:w-80 xl:shrink-0">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Mais em {ch?.group || 'este grupo'}</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">{around.series ? 'Episódios' : `Mais em ${ch?.group || 'este grupo'}`}</p>
             <div ref={listRef} className="space-y-1 xl:max-h-[calc(100dvh-6rem)] xl:overflow-y-auto xl:pr-1">
               {around.channels.map((c) => (
                 <Link
