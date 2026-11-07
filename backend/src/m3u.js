@@ -39,10 +39,17 @@ export function createParser({ dedupe = true } = {}) {
     info = null;
     opts = {};
   };
+  const header = {};
   return {
+    /** Atributos da linha #EXTM3U (ex.: url-tvg / x-tvg-url com o guia de programação). */
+    header,
     push(raw) {
       const line = raw.trim();
       if (!line) return null;
+      if (line.startsWith('#EXTM3U')) {
+        for (const m of line.matchAll(ATTR_RE)) header[m[1].toLowerCase()] = m[2].trim();
+        return null;
+      }
       if (line.startsWith('#EXTINF')) {
         const comma = findTitleComma(line);
         const attrs = {};
