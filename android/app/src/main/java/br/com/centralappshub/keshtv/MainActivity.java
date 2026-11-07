@@ -8,6 +8,7 @@ import android.content.res.Configuration;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.widget.FrameLayout;
@@ -53,6 +54,13 @@ public class MainActivity extends Activity {
   public class Bridge {
     @JavascriptInterface public boolean isTv() { return MainActivity.this.isTv(); }
     @JavascriptInterface public String version() { return BuildConfig.VERSION_NAME; }
+    /** Tela acesa enquanto o vídeo toca (o site chama ao tocar/pausar). */
+    @JavascriptInterface public void keepScreenOn(final boolean on) {
+      runOnUiThread(() -> {
+        if (on) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+      });
+    }
   }
 
   @Override
