@@ -76,8 +76,12 @@ api.put('/auth/password', wrap(async (req, res) => {
   const current = String(req.body?.current || '');
   const next = password(req.body?.password);
   if (!(await bcrypt.compare(current, req.user.passwordHash))) throw new HttpError(400, 'Senha atual incorreta');
-  await prisma.user.update({ where: { id: req.user.id }, data: { passwordHash: await bcrypt.hash(next, 10) } });
-  res.json({ ok: true });
+  // Nova versão de token: os outros aparelhos saem; este recebe um token novo.
+  const user = await prisma.user.update({
+    where: { id: req.user.id },
+    data: { passwordHash: await bcrypt.hash(next, 10), tokenVersion: { increment: 1 } },
+  });
+  res.json({ ok: true, token: signToken(user) });
 }));
 
 api.put('/auth/profile', wrap(async (req, res) => {
