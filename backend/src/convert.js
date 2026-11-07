@@ -85,7 +85,7 @@ export function parseHeader(buf) {
       duration = (raw * scale) / 1e9;
     }
     const vcodec = /AVC/.test(v[0]) ? 'h264' : /HEVC/.test(v[0]) ? 'hevc' : v[0].toLowerCase();
-    return { vcodec, pix: '', duration, hasAudio: /A_[A-Z]/.test(ascii), mkv: true };
+    return { vcodec, pix: '', duration, hasAudio: /A_[A-Z]/.test(ascii), linear: true };
   }
   if (ascii.startsWith('RIFF') && ascii.slice(8, 12) === 'AVI ') {
     const avih = ascii.indexOf('avih');
@@ -95,7 +95,7 @@ export function parseHeader(buf) {
     const frames = buf.readUInt32LE(avih + 24);
     const strf = ascii.indexOf('strf', vids);
     const fourcc = strf > 0 ? ascii.slice(strf + 24, strf + 28) : ascii.slice(vids + 4, vids + 8);
-    return { vcodec: /h264|avc1|x264/i.test(fourcc) ? 'h264' : fourcc.toLowerCase(), pix: '', duration: (usPerFrame * frames) / 1e6, hasAudio: ascii.includes('auds') };
+    return { vcodec: /h264|avc1|x264/i.test(fourcc) ? 'h264' : fourcc.toLowerCase(), pix: '', duration: (usPerFrame * frames) / 1e6, hasAudio: ascii.includes('auds'), linear: true };
   }
   return null;
 }
@@ -164,8 +164,9 @@ export async function startConversion({ url, ua, ref, offset, userId }) {
     '-hide_banner', '-loglevel', 'error', '-nostdin',
     ...headerArgs(ua, ref),
     '-reconnect', '1', '-reconnect_streamed', '1', '-reconnect_delay_max', '5',
-    // Do início não precisa do índice que fica no fim do MKV: lê em sequência (1 pedido em vez de 3).
-    ...(start ? ['-ss', String(start)] : ['-seekable', '0']),
+    // MKV/AVI do início não precisam do índice do fim do arquivo: lê em sequência (1 pedido em vez de 3).
+    // MP4 (às vezes com nome .avi) precisa: o índice (moov) costuma ficar no fim.
+    ...(start ? ['-ss', String(start)] : info.linear ? ['-seekable', '0'] : []),
     '-i', url,
     '-map', '0:v:0', ...(info.hasAudio ? ['-map', '0:a:0'] : []), '-sn',
     ...video,
