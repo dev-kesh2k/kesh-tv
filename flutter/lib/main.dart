@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'api.dart';
+import 'home_screen.dart';
 import 'login_screen.dart';
 import 'store.dart';
 import 'theme.dart';
@@ -32,16 +33,19 @@ class _KeshAppState extends State<KeshApp> {
       // Controle remoto: OK/Enter ativa o item em foco.
       shortcuts: {...WidgetsApp.defaultShortcuts, const SingleActivator(LogicalKeyboardKey.select): const ActivateIntent()},
       home: logged
-          ? HomePlaceholder(api: Api(store.server, () => store.token), onLogout: _logout)
+          ? Builder(builder: (context) {
+              final api = Api(store.server, () => store.token);
+              void push(Widget w) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => w));
+              return HomeScreen(
+                api: api,
+                onOpen: (c) => push(Scaffold(body: Center(child: Text(c.name)))),
+                onSeries: (s) => push(Scaffold(body: Center(child: Text(s.name)))),
+                onFavorites: () {},
+                onAccount: _logout,
+                onUnauthorized: _logout,
+              );
+            })
           : LoginScreen(store: store, onLogged: () => setState(() {})),
     );
   }
-}
-
-class HomePlaceholder extends StatelessWidget {
-  final Api api;
-  final VoidCallback onLogout;
-  const HomePlaceholder({super.key, required this.api, required this.onLogout});
-  @override
-  Widget build(BuildContext context) => Scaffold(body: Center(child: TextButton(onPressed: onLogout, child: const Text('Sair'))));
 }

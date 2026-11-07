@@ -6,6 +6,7 @@ class Kesh {
   static const panel = Color(0xFF1A2333);
   static const paper = Color(0xFFECE7DC);
   static const muted = Color(0xFF8A93A3);
+  static const line = Color(0xFF2A3446);
   static const signal = Color(0xFFF2B705);
   static const tally = Color(0xFFE0412F);
 }
