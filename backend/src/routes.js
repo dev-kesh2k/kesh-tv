@@ -247,6 +247,8 @@ async function decorate(userId, rows) {
       group: r.groupTitle,
       kind: r.kind,
       playlistId: r.playlistId,
+      // Número do canal: a ordem na lista (como o número do canal na TV).
+      number: (r.position ?? 0) + 1,
       logo: logoLink(r.logo),
       favorite: favs.has(r.id),
       ...(g?.now ? { now: g.now } : {}),
