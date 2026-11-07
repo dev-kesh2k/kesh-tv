@@ -35,14 +35,14 @@ export function Layout() {
         <div className="mb-8 px-2">
           <Logo />
         </div>
-        <nav className="flex flex-col gap-1">
+        <nav className="-mx-4 flex flex-col gap-1">
           {NAV.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
               end={end}
               className={({ isActive }) =>
-                `flex min-h-[44px] items-center gap-3 rounded-xl px-3 text-sm font-medium transition ${isActive ? 'bg-brand/15 text-brand-light' : 'text-slate-400 hover:bg-ink-800 hover:text-slate-100'}`
+                `flex min-h-[44px] items-center gap-3 border-l-[3px] px-3 text-[0.95rem] transition-colors ${isActive ? 'border-brand font-semibold text-slate-100' : 'border-transparent text-slate-400 hover:text-slate-100'}`
               }
             >
               <Icon className="h-5 w-5" />
@@ -66,7 +66,7 @@ export function Layout() {
               key={to}
               to={to}
               end={end}
-              className={({ isActive }) => `flex flex-col items-center justify-center gap-1 text-[11px] font-medium ${isActive ? 'text-brand' : 'text-slate-500'}`}
+              className={({ isActive }) => `flex flex-col items-center justify-center gap-1 border-t-2 text-[11px] font-medium ${isActive ? 'border-brand text-slate-100' : 'border-transparent text-slate-500'}`}
             >
               <Icon className="h-5 w-5" />
               {label}
