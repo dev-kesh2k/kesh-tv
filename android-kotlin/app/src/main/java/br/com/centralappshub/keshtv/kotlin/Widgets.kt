@@ -83,10 +83,10 @@ fun Bar(value: Double, modifier: Modifier = Modifier) {
 
 /** Linha da grade de programação: número, logo, nome e o que está no ar. Em foco: fundo claro e barra âmbar. */
 @Composable
-fun GuideRow(c: Channel, onFocus: (Channel) -> Unit = {}, onClick: () -> Unit) {
+fun GuideRow(c: Channel, modifier: Modifier = Modifier, onFocus: (Channel) -> Unit = {}, onClick: () -> Unit) {
   var focused by remember { mutableStateOf(false) }
   Row(
-    Modifier.fillMaxWidth().padding(vertical = 3.dp)
+    modifier.fillMaxWidth().padding(vertical = 3.dp)
       .onFocusChanged { focused = it.isFocused; if (it.isFocused) onFocus(c) }
       .tvClick(onClick)
       .background(if (focused) Kesh.Raise else Kesh.Panel, RoundedCornerShape(10.dp))
@@ -141,8 +141,8 @@ fun ChannelDetails(c: Channel?, modifier: Modifier) {
 
 /** Pôster (filmes, séries) com o título solto embaixo. */
 @Composable
-fun Poster(logo: String, title: String, subtitle: String, progress: Double = 0.0, onClick: () -> Unit) {
-  Column(Modifier.padding(6.dp).focusRing(RoundedCornerShape(8.dp), scale = 1.06f).clickable(onClick = onClick).padding(4.dp)) {
+fun Poster(logo: String, title: String, subtitle: String, progress: Double = 0.0, modifier: Modifier = Modifier, onClick: () -> Unit) {
+  Column(modifier.padding(6.dp).focusRing(RoundedCornerShape(8.dp), scale = 1.06f).clickable(onClick = onClick).padding(4.dp)) {
     Box {
       Logo(logo, title, Modifier.fillMaxWidth().aspectRatio(3f / 4f), cover = true)
       if (progress > 0) Bar(progress, Modifier.fillMaxWidth().align(Alignment.BottomCenter))
