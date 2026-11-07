@@ -1,10 +1,25 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Loader2, RotateCcw, VolumeX } from 'lucide-react';
-import { apiUrl, Source } from '../api';
+import { api, apiUrl, Source } from '../api';
 
 type Engine = { destroy: () => void };
 // Ao vivo começa rápido; filmes/episódios de Xtream passam por redirecionamento e demoram mais.
-const START_TIMEOUT = { hls: 20000, ts: 20000, flv: 20000, file: 40000 };
+const START_TIMEOUT = { hls: 20000, ts: 20000, flv: 20000, file: 40000, convert: 70000 };
+
+interface Conv {
+  sid: string;
+  duration: number;
+  offset: number;
+  converting: boolean;
+}
+
+const fmtTime = (t: number) => {
+  const s = Math.max(0, Math.floor(t));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = String(s % 60).padStart(2, '0');
+  return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
+};
 
 const isApple = () => /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
@@ -20,6 +35,14 @@ export function Player({ sources, title, onPlaying }: { sources: Source[]; title
   const [attempt, setAttempt] = useState(0);
   const playedRef = useRef(false);
   const [muted, setMuted] = useState(false);
+  // Conversão no servidor: o vídeo começa em `offset`; avançar além do que já foi convertido reinicia dali.
+  const [conv, setConv] = useState<Conv | null>(null);
+  const [seekTo, setSeekTo] = useState(0);
+  const [now, setNow] = useState(0);
+  const [dragging, setDragging] = useState<number | null>(null);
+  // Posição pedida e ainda não aplicada: toques seguidos em +30s se somam e só o último reinicia a conversão.
+  const [pending, setPending] = useState<number | null>(null);
+  const seekTimer = useRef<number>();
 
   // Se o usuário ativar o som pelos controles do vídeo, some o botão.
   useEffect(() => {
@@ -34,8 +57,19 @@ export function Player({ sources, title, onPlaying }: { sources: Source[]; title
     setIndex(0);
     setState('loading');
     setDetail('');
+    setConv(null);
+    setSeekTo(0);
+    setPending(null);
     playedRef.current = false;
   }, [sources]);
+
+  useEffect(() => {
+    const el = video.current;
+    if (!el) return;
+    const tick = () => setNow(el.currentTime);
+    el.addEventListener('timeupdate', tick);
+    return () => el.removeEventListener('timeupdate', tick);
+  }, []);
 
   useEffect(() => {
     const el = video.current;
@@ -60,6 +94,7 @@ export function Player({ sources, title, onPlaying }: { sources: Source[]; title
     const timer = window.setTimeout(() => fail('O canal não respondeu a tempo'), START_TIMEOUT[src.type] || 20000);
     const onPlay = () => {
       window.clearTimeout(timer);
+      setPending(null);
       setState('playing');
       if (!playedRef.current) {
         playedRef.current = true;
@@ -82,31 +117,47 @@ export function Player({ sources, title, onPlaying }: { sources: Source[]; title
         });
       });
 
+    let convSid = '';
+    const playHls = async (hlsUrl: string, fromStart: boolean) => {
+      const native = el.canPlayType('application/vnd.apple.mpegurl');
+      const { default: Hls } = await import('hls.js');
+      if (cancelled) return;
+      if (Hls.isSupported() && !(native && isApple())) {
+        const hls = new Hls({ enableWorker: true, lowLatencyMode: false, backBufferLength: 30, manifestLoadingTimeOut: fromStart ? 50000 : 12000, fragLoadingTimeOut: fromStart ? 30000 : 20000, ...(fromStart ? { startPosition: 0 } : {}) });
+        let recovered = false;
+        hls.on(Hls.Events.ERROR, (_e, data) => {
+          if (!data.fatal) return;
+          if (data.type === Hls.ErrorTypes.MEDIA_ERROR && !recovered) {
+            recovered = true;
+            hls.recoverMediaError();
+            return;
+          }
+          fail(data.details || 'Erro no stream');
+        });
+        hls.on(Hls.Events.MANIFEST_PARSED, tryPlay);
+        hls.loadSource(hlsUrl);
+        hls.attachMedia(el);
+        engine = hls;
+      } else if (native) {
+        el.src = hlsUrl;
+        tryPlay();
+      } else fail('Este navegador não toca HLS');
+    };
+
     (async () => {
+      if (src.type === 'convert') {
+        const r = await api.post<Conv & { playlist: string }>('convert/start', { link: src.url, t: seekTo });
+        if (cancelled) {
+          api.del(`convert/${r.sid}`).catch(() => {});
+          return;
+        }
+        convSid = r.sid;
+        setConv({ sid: r.sid, duration: r.duration, offset: r.offset, converting: r.converting });
+        await playHls(apiUrl(r.playlist), true);
+        return;
+      }
       if (src.type === 'hls') {
-        const native = el.canPlayType('application/vnd.apple.mpegurl');
-        const { default: Hls } = await import('hls.js');
-        if (cancelled) return;
-        if (Hls.isSupported() && !(native && isApple())) {
-          const hls = new Hls({ enableWorker: true, lowLatencyMode: false, backBufferLength: 30, manifestLoadingTimeOut: 12000, fragLoadingTimeOut: 20000 });
-          let recovered = false;
-          hls.on(Hls.Events.ERROR, (_e, data) => {
-            if (!data.fatal) return;
-            if (data.type === Hls.ErrorTypes.MEDIA_ERROR && !recovered) {
-              recovered = true;
-              hls.recoverMediaError();
-              return;
-            }
-            fail(data.details || 'Erro no stream');
-          });
-          hls.on(Hls.Events.MANIFEST_PARSED, tryPlay);
-          hls.loadSource(url);
-          hls.attachMedia(el);
-          engine = hls;
-        } else if (native) {
-          el.src = url;
-          tryPlay();
-        } else fail('Este navegador não toca HLS');
+        await playHls(url, false);
         return;
       }
       if (src.type === 'ts' || src.type === 'flv') {
@@ -138,10 +189,11 @@ export function Player({ sources, title, onPlaying }: { sources: Source[]; title
       } catch {
         /* ignora */
       }
+      if (convSid) api.del(`convert/${convSid}`).catch(() => {});
       el.removeAttribute('src');
       el.load();
     };
-  }, [sources, index, attempt, onPlaying]);
+  }, [sources, index, attempt, onPlaying, seekTo]);
 
   const retry = () => {
     setIndex(0);
@@ -149,7 +201,32 @@ export function Player({ sources, title, onPlaying }: { sources: Source[]; title
     setAttempt((a) => a + 1);
   };
 
+  const position = conv ? conv.offset + now : 0;
+  const shown = dragging ?? pending ?? position;
+  const seek = (target: number) => {
+    if (!conv) return;
+    const t = Math.max(0, Math.min(target, conv.duration - 3));
+    setPending(t);
+    window.clearTimeout(seekTimer.current);
+    seekTimer.current = window.setTimeout(() => {
+      const el = video.current;
+      if (!el) return;
+      // Dentro do que já foi convertido: só move o vídeo; fora disso, reinicia a conversão a partir dali.
+      const rel = t - conv.offset;
+      const end = el.seekable.length ? el.seekable.end(el.seekable.length - 1) : 0;
+      if (rel >= 0 && rel <= end - 2) {
+        el.currentTime = rel;
+        setPending(null);
+      } else {
+        setState('loading');
+        setSeekTo(Math.floor(t));
+      }
+    }, 700);
+  };
+  useEffect(() => () => window.clearTimeout(seekTimer.current), []);
+
   return (
+    <div>
     <div className="relative aspect-video w-full overflow-hidden bg-black sm:rounded-2xl">
       <video ref={video} className="h-full w-full bg-black" controls playsInline autoPlay title={title} />
       {muted && state === 'playing' && (
@@ -169,8 +246,14 @@ export function Player({ sources, title, onPlaying }: { sources: Source[]; title
           <div className="flex flex-col items-center gap-2 text-sm text-slate-200">
             <Loader2 className="h-8 w-8 animate-spin text-brand" />
             <span>
-              Conectando{sources.length > 1 ? ` · fonte ${Math.min(index + 1, sources.length)} de ${sources.length}` : ''}
-              {sources[index]?.via === 'proxy' ? ' (pelo servidor)' : ''}
+              {sources[index]?.type === 'convert' ? (
+                'Preparando o arquivo no servidor…'
+              ) : (
+                <>
+                  Conectando{sources.length > 1 ? ` · fonte ${Math.min(index + 1, sources.length)} de ${sources.length}` : ''}
+                  {sources[index]?.via === 'proxy' ? ' (pelo servidor)' : ''}
+                </>
+              )}
             </span>
           </div>
         </div>
@@ -187,6 +270,36 @@ export function Player({ sources, title, onPlaying }: { sources: Source[]; title
           </div>
         </div>
       )}
+    </div>
+    {conv && conv.duration > 0 && (
+      <div className="flex items-center gap-2 bg-ink-900 px-3 py-2 sm:mt-2 sm:rounded-xl">
+        <button type="button" aria-label="Voltar 10 segundos" onClick={() => seek(shown - 10)} className="h-10 shrink-0 rounded-lg px-2 text-xs font-semibold text-slate-300 hover:bg-ink-800">
+          −10s
+        </button>
+        <span className="w-14 shrink-0 text-right font-mono text-xs text-slate-400">{fmtTime(shown)}</span>
+        <input
+          type="range"
+          aria-label="Posição do vídeo"
+          min={0}
+          max={Math.floor(conv.duration)}
+          value={Math.floor(shown)}
+          onChange={(e) => setDragging(Number(e.target.value))}
+          onPointerUp={() => {
+            if (dragging !== null) seek(dragging);
+            setDragging(null);
+          }}
+          onKeyUp={() => {
+            if (dragging !== null) seek(dragging);
+            setDragging(null);
+          }}
+          className="h-10 min-w-0 flex-1 accent-brand"
+        />
+        <span className="w-14 shrink-0 font-mono text-xs text-slate-500">{fmtTime(conv.duration)}</span>
+        <button type="button" aria-label="Avançar 30 segundos" onClick={() => seek(shown + 30)} className="h-10 shrink-0 rounded-lg px-2 text-xs font-semibold text-slate-300 hover:bg-ink-800">
+          +30s
+        </button>
+      </div>
+    )}
     </div>
   );
 }

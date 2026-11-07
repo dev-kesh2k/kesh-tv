@@ -47,7 +47,7 @@ function blockedIp(ip) {
   return v === '::' || v === '::1' || v.startsWith('fe80') || v.startsWith('fc') || v.startsWith('fd') || v.startsWith('ff');
 }
 
-async function assertPublic(url) {
+export async function assertPublic(url) {
   let u;
   try {
     u = new URL(url);

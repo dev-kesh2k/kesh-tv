@@ -135,7 +135,7 @@ export interface Group {
 }
 
 export interface Source {
-  type: 'hls' | 'ts' | 'flv' | 'file';
+  type: 'hls' | 'ts' | 'flv' | 'file' | 'convert';
   via: 'direct' | 'proxy';
   url: string;
 }

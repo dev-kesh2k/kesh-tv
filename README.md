@@ -11,3 +11,10 @@ Leitor de listas IPTV M3U: adicione a lista por link (atualizada sozinha 1×/dia
 
 frontend/: React + Vite + Tailwind. backend/: Express + Prisma (PostgreSQL).
 Login inicial: SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD do backend/.env.example.
+
+## Conversão no servidor (MKV, AVI, HEVC…)
+Arquivos que o navegador não toca são convertidos na hora pelo ffmpeg (por isso o backend tem `Dockerfile`) para HLS em `/tmp/kesh-convert/<sessão>`:
+H.264 de 8 bits só é reempacotado; o resto vira H.264 (libx264 veryfast, 3 threads). Áudio sempre AAC estéreo.
+Uma conversão por usuário, no máximo 4 ao mesmo tempo (2 com conversão de vídeo). O ffmpeg pausa quando está ~3 min à frente do que está sendo assistido e a sessão acaba após 3 min sem pedidos.
+Avançar além do que já foi convertido reinicia a conversão a partir dali (barra própria abaixo do vídeo).
+As sessões ficam na memória do processo: o app deve rodar com **1 réplica**.
