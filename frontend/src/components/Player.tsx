@@ -27,7 +27,21 @@ const isApple = () => /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.p
  * Toca a primeira fonte que funcionar: HLS (hls.js ou nativo no Safari), MPEG-TS/FLV (mpegts.js) ou arquivo.
  * Se uma fonte falhar ou não começar em 15 s, passa para a próxima (ex.: link direto → proxy do servidor).
  */
-export function Player({ sources, title, onPlaying }: { sources: Source[]; title: string; onPlaying?: () => void }) {
+export function Player({
+  sources,
+  title,
+  onPlaying,
+  startAt = 0,
+  onProgress,
+}: {
+  sources: Source[];
+  title: string;
+  onPlaying?: () => void;
+  /** Segundos para começar (continuar de onde parou). */
+  startAt?: number;
+  /** Posição absoluta e duração, a cada ~15 s, ao pausar e ao sair. */
+  onProgress?: (position: number, duration: number) => void;
+}) {
   const video = useRef<HTMLVideoElement>(null);
   const [index, setIndex] = useState(0);
   const [state, setState] = useState<'loading' | 'playing' | 'failed'>('loading');
@@ -53,14 +67,43 @@ export function Player({ sources, title, onPlaying }: { sources: Source[]; title
     return () => el.removeEventListener('volumechange', sync);
   }, []);
 
+  // Início pedido: arquivos pulam no loadedmetadata; conversões já começam do ponto (offset).
+  const startRef = useRef(startAt);
+  const progressRef = useRef(onProgress);
+  progressRef.current = onProgress;
+  const convRef = useRef<Conv | null>(null);
+  convRef.current = conv;
+
   useEffect(() => {
+    startRef.current = startAt;
     setIndex(0);
     setState('loading');
     setDetail('');
     setConv(null);
-    setSeekTo(0);
+    setSeekTo(Math.floor(startAt || 0));
     setPending(null);
     playedRef.current = false;
+  }, [sources]);
+
+  // Progresso: posição absoluta (offset da conversão + tempo do vídeo) e duração conhecida.
+  useEffect(() => {
+    const el = video.current;
+    if (!el) return;
+    const report = () => {
+      const c = convRef.current;
+      const position = (c ? c.offset : 0) + el.currentTime;
+      const duration = c ? c.duration : Number.isFinite(el.duration) ? el.duration : 0;
+      if (position > 1 && duration > 0) progressRef.current?.(position, duration);
+    };
+    const timer = window.setInterval(() => !el.paused && report(), 15000);
+    el.addEventListener('pause', report);
+    window.addEventListener('pagehide', report);
+    return () => {
+      report();
+      window.clearInterval(timer);
+      el.removeEventListener('pause', report);
+      window.removeEventListener('pagehide', report);
+    };
   }, [sources]);
 
   useEffect(() => {
@@ -102,8 +145,14 @@ export function Player({ sources, title, onPlaying }: { sources: Source[]; title
       }
     };
     const onError = () => fail(el.error?.message || 'Formato não suportado neste aparelho');
+    // Continuar de onde parou (arquivos e HLS com fim; ao vivo não tem duração finita).
+    const onMeta = () => {
+      const t = startRef.current;
+      if (src.type !== 'convert' && t > 0 && Number.isFinite(el.duration) && t < el.duration - 5) el.currentTime = t;
+    };
     el.addEventListener('playing', onPlay);
     el.addEventListener('error', onError);
+    el.addEventListener('loadedmetadata', onMeta);
 
     // Navegadores bloqueiam autoplay com som: toca mudo e mostra o botão "Ativar som".
     const tryPlay = () =>
@@ -184,6 +233,7 @@ export function Player({ sources, title, onPlaying }: { sources: Source[]; title
       window.clearTimeout(timer);
       el.removeEventListener('playing', onPlay);
       el.removeEventListener('error', onError);
+      el.removeEventListener('loadedmetadata', onMeta);
       try {
         engine?.destroy();
       } catch {
