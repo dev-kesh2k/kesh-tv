@@ -51,9 +51,9 @@ export function ChannelCard({ channel, onChange, onRemove }: { channel: Channel;
   return (
     <Link
       to={`/assistir/${channel.id}`}
-      className="group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-ink-700/60 bg-ink-900 transition hover:border-brand/60 hover:bg-ink-850 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
+      className="group relative flex min-w-0 flex-col rounded-[6px] outline-none focus-visible:outline-none"
     >
-      <div className="relative">
+      <div className="relative overflow-hidden rounded-[6px] ring-brand ring-offset-2 ring-offset-ink-950 transition-shadow group-hover:ring-2 group-focus-visible:ring-[3px]">
         <ChannelLogo channel={channel} className={`w-full ${poster ? 'aspect-[3/4]' : 'aspect-video'}`} />
         {!!channel.progress && <ProgressBar value={channel.progress} className="absolute inset-x-0 bottom-0" />}
         {channel.now && <ProgressBar value={Math.min(0.99, programmeProgress(channel.now))} className="absolute inset-x-0 bottom-0" />}
@@ -71,7 +71,7 @@ export function ChannelCard({ channel, onChange, onRemove }: { channel: Channel;
           </button>
         )}
       </div>
-      <div className="flex min-h-[52px] items-start gap-1 p-2.5 pr-1">
+      <div className="flex min-h-[52px] items-start gap-1 pt-2">
         <div className="min-w-0 flex-1">
           <p className="line-clamp-2 text-[13px] font-medium leading-snug text-slate-100">{channel.name}</p>
           {channel.now ? (
@@ -110,10 +110,12 @@ export function SeriesCard({ series }: { series: Series }) {
   return (
     <Link
       to={seriesLink(series)}
-      className="group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-ink-700/60 bg-ink-900 transition hover:border-brand/60 hover:bg-ink-850 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
+      className="group flex min-w-0 flex-col rounded-[6px] outline-none focus-visible:outline-none"
     >
-      <ChannelLogo channel={fake} className="aspect-[3/4] w-full" />
-      <div className="min-h-[52px] p-2.5">
+      <div className="overflow-hidden rounded-[6px] ring-brand ring-offset-2 ring-offset-ink-950 transition-shadow group-hover:ring-2 group-focus-visible:ring-[3px]">
+        <ChannelLogo channel={fake} className="aspect-[3/4] w-full" />
+      </div>
+      <div className="min-h-[52px] pt-2">
         <p className="line-clamp-2 text-[13px] font-medium leading-snug text-slate-100">{series.name}</p>
         <p className="mt-0.5 truncate text-[11px] text-slate-500">
           {series.seasons > 1 ? `${series.seasons} temporadas · ` : ''}
@@ -139,9 +141,9 @@ export function SkeletonGrid({ count = 12, poster = false }: { count?: number; p
   return (
     <div className="tv-grid grid grid-cols-2 gap-2.5 min-[480px]:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 sm:gap-3" aria-hidden="true">
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="overflow-hidden rounded-2xl border border-ink-700/40 bg-ink-900">
-          <div className={`w-full animate-pulse bg-ink-800 ${poster ? 'aspect-[3/4]' : 'aspect-video'}`} />
-          <div className="space-y-2 p-2.5">
+        <div key={i}>
+          <div className={`w-full animate-pulse rounded-[6px] bg-ink-800 ${poster ? 'aspect-[3/4]' : 'aspect-video'}`} />
+          <div className="space-y-2 pt-2">
             <div className="h-3 w-3/4 animate-pulse rounded bg-ink-800" />
             <div className="h-2.5 w-1/2 animate-pulse rounded bg-ink-800/70" />
           </div>
