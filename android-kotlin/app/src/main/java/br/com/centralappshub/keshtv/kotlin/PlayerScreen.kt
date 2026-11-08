@@ -108,7 +108,11 @@ fun PlayerScreen(api: Api, id: String, onBack: () -> Unit) {
 
   val player = remember {
     val http = DefaultHttpDataSource.Factory().setUserAgent(UA).setAllowCrossProtocolRedirects(true).setConnectTimeoutMs(15_000).setReadTimeoutMs(30_000)
-    ExoPlayer.Builder(context).setMediaSourceFactory(DefaultMediaSourceFactory(context).setDataSourceFactory(http)).build().apply { playWhenReady = true }
+    ExoPlayer.Builder(context).setMediaSourceFactory(DefaultMediaSourceFactory(context).setDataSourceFactory(http))
+      // Foco de áudio: outro app que começa a tocar (YouTube etc.) pausa o Kesh TV.
+      .setAudioAttributes(androidx.media3.common.AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), true)
+      .setHandleAudioBecomingNoisy(true)
+      .build().apply { playWhenReady = true }
   }
 
   fun playAt(i: Int, resume: Int = 0) {
@@ -135,6 +139,21 @@ fun PlayerScreen(api: Api, id: String, onBack: () -> Unit) {
       player.removeListener(listener)
       player.release()
     }
+  }
+
+  // Não toca em segundo plano: saiu do app (Home, outro app, TV em espera) = pausa; ao voltar continua de onde estava.
+  val lifecycle = androidx.compose.ui.platform.LocalLifecycleOwner.current.lifecycle
+  DisposableEffect(lifecycle) {
+    var resumeOnStart = false
+    val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+      when (event) {
+        androidx.lifecycle.Lifecycle.Event.ON_STOP -> { resumeOnStart = player.playWhenReady; player.pause() }
+        androidx.lifecycle.Lifecycle.Event.ON_START -> if (resumeOnStart) { resumeOnStart = false; player.play() }
+        else -> {}
+      }
+    }
+    lifecycle.addObserver(observer)
+    onDispose { lifecycle.removeObserver(observer) }
   }
 
   LaunchedEffect(currentId) {

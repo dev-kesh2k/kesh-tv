@@ -24,13 +24,6 @@ class MainActivity : ComponentActivity() {
     val store = Store(this)
     setContent { KeshTheme { KeshApp(store) } }
   }
-
-  // Não fica em segundo plano: saiu do app (Home, outro app, TV em espera) = fecha e para o player.
-  // Ao abrir de novo começa do zero, na aba Canais.
-  override fun onStop() {
-    super.onStop()
-    if (!isChangingConfigurations) finishAndRemoveTask()
-  }
 }
 
 /** Telas: login → abas Canais / Favoritos / Recentes / Listas / Conta → série → player. */
