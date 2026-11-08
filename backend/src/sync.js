@@ -85,6 +85,38 @@ function m3uItems(lines, header) {
 }
 
 /**
+ * Trocar o link da lista (outro servidor/usuário) muda a URL de todos os canais, e eles viram linhas novas.
+ * Antes de apagar as antigas, passa recentes e favoritos para o canal novo de mesmo nome/tipo/episódio
+ * (havendo vários, o de mesmo id de stream no fim da URL e depois o primeiro da lista).
+ */
+async function carryOverUserData(playlistId, syncId) {
+  await prisma.$executeRaw`
+    WITH m AS (
+      SELECT DISTINCT ON (o."id") o."id" AS old_id, n."id" AS new_id
+      FROM "Channel" o
+      JOIN "Channel" n ON n."playlistId" = o."playlistId" AND n."syncId" = ${syncId} AND n."kind" = o."kind"
+        AND n."name" = o."name" AND n."seriesName" = o."seriesName" AND n."season" = o."season" AND n."episode" = o."episode"
+      WHERE o."playlistId" = ${playlistId}::uuid AND o."syncId" <> ${syncId}
+        AND (EXISTS (SELECT 1 FROM "History" h WHERE h."channelId" = o."id")
+          OR EXISTS (SELECT 1 FROM "Favorite" f WHERE f."channelId" = o."id"))
+      ORDER BY o."id",
+        (substring(n."url" from '/([0-9]+)(\\.[A-Za-z0-9]+)?$') IS NOT DISTINCT FROM substring(o."url" from '/([0-9]+)(\\.[A-Za-z0-9]+)?$')) DESC,
+        n."position"
+    ), fav AS (
+      INSERT INTO "Favorite" ("userId", "channelId", "createdAt")
+      SELECT f."userId", m.new_id, f."createdAt" FROM "Favorite" f JOIN m ON m.old_id = f."channelId"
+      ON CONFLICT ("userId", "channelId") DO NOTHING
+    )
+    INSERT INTO "History" ("userId", "channelId", "watchedAt", "position", "duration")
+    SELECT DISTINCT ON (h."userId", m.new_id) h."userId", m.new_id, h."watchedAt", h."position", h."duration"
+    FROM "History" h JOIN m ON m.old_id = h."channelId"
+    ORDER BY h."userId", m.new_id, h."watchedAt" DESC
+    ON CONFLICT ("userId", "channelId") DO UPDATE
+      SET "watchedAt" = EXCLUDED."watchedAt", "position" = EXCLUDED."position", "duration" = EXCLUDED."duration"
+      WHERE EXCLUDED."watchedAt" > "History"."watchedAt"`;
+}
+
+/**
  * Grava os itens; só apaga os que sumiram se a leitura terminou inteira. Devolve as contagens.
  * `xtream`: séries vêm como um item só (episódios buscados ao abrir); as que já têm episódios gravados os mantêm.
  */
@@ -122,6 +154,7 @@ async function importItems(playlistId, items, { xtream = false } = {}) {
       DELETE FROM "Channel" p WHERE p."playlistId" = ${playlistId}::uuid AND p."syncId" = ${syncId} AND p."tvgId" LIKE ${mark}
         AND EXISTS (SELECT 1 FROM "Channel" e WHERE e."playlistId" = p."playlistId" AND e."seriesName" = p."seriesName" AND e."tvgId" NOT LIKE ${mark} AND e."kind" = 'series')`;
   }
+  await carryOverUserData(playlistId, syncId);
   await prisma.$executeRaw`DELETE FROM "Channel" WHERE "playlistId" = ${playlistId}::uuid AND "syncId" <> ${syncId}`;
   const [c] = await prisma.$queryRaw`
     SELECT COUNT(*)::int AS total,
