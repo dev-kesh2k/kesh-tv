@@ -14,6 +14,9 @@ const IDLE_TIMEOUT = 90_000;
 const BATCH = 2000;
 const STALE_MS = 20 * 60_000;
 const RETRY_AFTER_ERROR_MS = 6 * 3600_000;
+// Atualização "em andamento" há mais que isso morreu no meio (container reiniciado/deploy): canais novos e antigos
+// ficaram juntos (lista duplicada). A atualização automática refaz na hora.
+const ORPHAN_MS = 60 * 60_000;
 
 /** Linhas de um texto (upload) ou de um fluxo de bytes (download). */
 async function* linesOf(source) {
@@ -244,6 +247,20 @@ export function startAutoRefresh() {
     if (running) return;
     running = true;
     try {
+      const orphanBefore = new Date(Date.now() - ORPHAN_MS);
+      // Arquivo enviado não dá para ler de novo sozinho: avisa para enviar outra vez.
+      await prisma.playlist.updateMany({
+        where: { status: 'syncing', url: null, syncStarted: { lt: orphanBefore } },
+        data: { status: 'error', error: 'A atualização foi interrompida: envie o arquivo de novo', syncStarted: new Date() },
+      });
+      const orphans = await prisma.playlist.findMany({
+        where: { status: 'syncing', url: { not: null }, OR: [{ syncStarted: null }, { syncStarted: { lt: orphanBefore } }] },
+        select: { id: true },
+      });
+      for (const p of orphans) {
+        console.warn('auto-refresh', p.id, 'atualização interrompida, refazendo');
+        await startSync(p.id).then((r) => r.done).catch((e) => console.warn('auto-refresh', p.id, e.message));
+      }
       const due = await prisma.playlist.findMany({
         where: {
           autoRefresh: true,
