@@ -18,3 +18,4 @@ Obrigado pelo interesse! Sugestões e correções são bem-vindas.
 ## Commits em dupla
 
 Os envios feitos pelo Central Apps Hub levam a linha `Co-Authored-By` do Claude, que participou da mudança.
+O autor do commit é o dono da conta do GitHub que enviou.
