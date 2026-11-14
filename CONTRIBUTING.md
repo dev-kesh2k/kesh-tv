@@ -14,3 +14,7 @@ Obrigado pelo interesse! Sugestões e correções são bem-vindas.
 - Código e mensagens em português do Brasil.
 - Layout mobile-first: nada de rolagem horizontal de 320 px em diante.
 - Não inclua listas, links de canais ou credenciais de provedores IPTV em código, testes ou issues.
+
+## Commits em dupla
+
+Os envios feitos pelo Central Apps Hub levam a linha `Co-Authored-By` do Claude, que participou da mudança.
