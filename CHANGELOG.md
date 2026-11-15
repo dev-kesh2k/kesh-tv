@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-15 — segurança
+
+- **react-router v7** no frontend: corrige o open redirect por barra invertida em `<Link>`/`useNavigate` (GHSA-wrjc-x8rr-h8h6) e o alerta de SSR (GHSA-337j-9hxr-rhxg). As flags `future` da v6 viraram o padrão (#197).
+
 ## 2026-11-07 (manhã) — apps nativos
 
 - **App Android nativo em Kotlin** (`android-kotlin/`): Jetpack Compose, player Media3/ExoPlayer que toca o link original no aparelho e cai para o servidor se falhar; login, abas, grupos, busca, grade de programação, séries com temporadas, favoritos, vistos por último, retomada e troca de canal pelo controle.
