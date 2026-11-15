@@ -15,6 +15,7 @@ on:
       - '.github/dependabot.yml'
       - '.github/workflows/ci.yml'
       - 'docs/**'
+      - 'frontend/test/**'
       - 'deploy/docker/**'
       - 'android/**'
       - 'android-kotlin/**'
