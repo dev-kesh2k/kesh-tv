@@ -21,6 +21,8 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npx prisma generate
       - run: npm run build
+      - name: Lint (variável sem declarar/importar)
+        run: npx --yes eslint@9 .
       - run: npm test
         env:
           JWT_SECRET: ci
