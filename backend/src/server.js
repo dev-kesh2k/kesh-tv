@@ -1,6 +1,6 @@
 import express from 'express';
 import { api } from './routes.js';
-import { HttpError } from './db.js';
+import { HttpError, prisma } from './db.js';
 import { startAutoRefresh } from './sync.js';
 
 const app = express();
@@ -11,7 +11,16 @@ app.use((req, res, next) => (/\/(playlists\/upload|favorites\/import)$/.test(req
 
 // O proxy pode repassar /api/..., o caminho completo /<slug>/api/... ou já sem o prefixo.
 const publicPath = String(process.env.PUBLIC_PATH || '').replace(/\/+$/, '');
-app.get(['/health', `${publicPath}/health`], (_req, res) => res.json({ ok: true }));
+// É este /health que o Hub enxerga (o Traefik tira o prefixo /kesh-tv/api): 503 quando o Postgres não responde.
+app.get(['/health', `${publicPath}/health`], async (_req, res) => {
+  const started = Date.now();
+  try {
+    await Promise.race([prisma.$queryRaw`SELECT 1`, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))]);
+    res.json({ ok: true, db: 'ok', dbMs: Date.now() - started });
+  } catch {
+    res.status(503).json({ ok: false, db: 'erro' });
+  }
+});
 if (publicPath) app.use(`${publicPath}/api`, api);
 app.use('/api', api);
 app.use('/', api);
