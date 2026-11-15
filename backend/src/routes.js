@@ -45,10 +45,16 @@ function requireAdmin(req, _res, next) {
 }
 
 // ---------- Saúde, proxy e autenticação (públicos) ----------
-api.get('/health', wrap(async (_req, res) => {
-  await prisma.$queryRaw`SELECT 1`;
-  res.json({ ok: true });
-}));
+// 503 quando o Postgres não responde (o Hub mostra "banco fora do ar" no Monitoramento e avisa).
+api.get('/health', async (_req, res) => {
+  const started = Date.now();
+  try {
+    await Promise.race([prisma.$queryRaw`SELECT 1`, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))]);
+    res.json({ ok: true, db: 'ok', dbMs: Date.now() - started });
+  } catch {
+    res.status(503).json({ ok: false, db: 'erro' });
+  }
+});
 
 // Links assinados (HMAC + validade): o <video> e o <img> não mandam o token de login.
 api.get('/stream', wrap(proxyStream));
