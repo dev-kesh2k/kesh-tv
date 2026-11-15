@@ -2,6 +2,7 @@
 
 ## 2026-11-15 — segurança
 
+- **Saúde:** `/api/health` responde 503 (`db: erro`) quando o Postgres não responde, e o Hub mostra "banco fora do ar" no Monitoramento (#199).
 - **react-router v7** no frontend: corrige o open redirect por barra invertida em `<Link>`/`useNavigate` (GHSA-wrjc-x8rr-h8h6) e o alerta de SSR (GHSA-337j-9hxr-rhxg). As flags `future` da v6 viraram o padrão (#197).
 
 ## 2026-11-07 (manhã) — apps nativos
