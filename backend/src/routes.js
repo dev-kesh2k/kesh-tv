@@ -1,6 +1,7 @@
 import express, { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma, HttpError } from './db.js';
+import { EMAIL_RE, hostName, kindOf, listUrl, password, text, uuid } from './validate.js';
 import { signToken, publicUser, requireAuth, tooManyAttempts, recordFailure, clearFailures, clientIp } from './auth.js';
 import { expandXtreamSeries, startSync } from './sync.js';
 import { SERIES_MARK } from './xtream.js';
@@ -15,30 +16,6 @@ import { logoLink, probeType, proxyLogo, proxyStream, streamLink, typeFromUrl, x
 export const api = Router();
 
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const UUID_RE = /^[0-9a-f-]{36}$/i;
-const KINDS = ['live', 'movie', 'series'];
-
-function text(v, field, { max = 200, required = false } = {}) {
-  const s = typeof v === 'string' ? v.trim() : '';
-  if (required && !s) throw new HttpError(400, `${field} é obrigatório`);
-  if (s.length > max) throw new HttpError(400, `${field} deve ter no máximo ${max} caracteres`);
-  return s;
-}
-function password(v) {
-  if (typeof v !== 'string' || v.length < 8) throw new HttpError(400, 'A senha deve ter pelo menos 8 caracteres');
-  if (v.length > 200) throw new HttpError(400, 'Senha muito longa');
-  return v;
-}
-function listUrl(v) {
-  const s = text(v, 'Link da lista', { max: 2000, required: true });
-  if (!/^https?:\/\/\S+$/i.test(s)) throw new HttpError(400, 'O link deve começar com http:// ou https://');
-  return s;
-}
-const uuid = (v, what = 'Registro') => {
-  if (!UUID_RE.test(String(v || ''))) throw new HttpError(404, `${what} não encontrado`);
-  return String(v);
-};
 function requireAdmin(req, _res, next) {
   if (req.user?.role !== 'admin') return next(new HttpError(403, 'Apenas o administrador'));
   next();
@@ -229,14 +206,6 @@ api.delete('/playlists/:id', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
-function hostName(url) {
-  try {
-    return new URL(url).hostname.replace(/^www\./, '').slice(0, 80);
-  } catch {
-    return 'Minha lista';
-  }
-}
-
 // ---------- Canais ----------
 const channelSelect = { id: true, name: true, groupTitle: true, logo: true, kind: true, playlistId: true, position: true, tvgId: true };
 
@@ -268,7 +237,6 @@ async function playlistIds(req) {
   if (req.query.playlist) return [(await ownPlaylist(req, req.query.playlist)).id];
   return (await prisma.playlist.findMany({ where: { userId: req.user.id }, select: { id: true } })).map((p) => p.id);
 }
-const kindOf = (v) => (KINDS.includes(String(v)) ? String(v) : 'live');
 
 // Contagem por grupo em listas enormes leva ~1 s: guarda até a lista ser atualizada (chave inclui syncedAt).
 const groupCache = new Map();
