@@ -324,6 +324,12 @@ export function Player({
   };
   useEffect(() => () => window.clearTimeout(seekTimer.current), []);
 
+  // Na falha, o foco vai para "Tentar de novo" (controle remoto da TV).
+  const retryBtn = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (state === 'failed') retryBtn.current?.focus();
+  }, [state]);
+
   // Atalhos: espaço/K/OK pausa (e teclas de mídia do controle), F tela cheia, M mudo, ←/→ 10 s (↑/↓ trocam de canal na página).
   const box = useRef<HTMLDivElement>(null);
   const seekRef = useRef(seek);
@@ -378,7 +384,7 @@ export function Player({
           </div>
         </div>
       )}
-      {!controls && hud && state === 'playing' && (conv?.duration || Number.isFinite(video.current?.duration ?? NaN)) && (
+      {!controls && hud && state === 'playing' && (conv?.duration || Number.isFinite(video.current?.duration ?? Number.NaN)) && (
         <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center gap-4 bg-gradient-to-b from-black/80 to-transparent px-12 pb-16 pt-10 text-lg text-white">
           <span>{fmtTime(conv ? shown : now)}</span>
           <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/25">
@@ -423,7 +429,7 @@ export function Player({
             <p className="font-semibold">Não foi possível abrir este canal</p>
             <p className="text-sm text-slate-300">O canal pode estar fora do ar no provedor ou usar um formato que este aparelho não toca. Teste o link no VLC com “Copiar link”.</p>
             {detail && <p className="text-xs text-slate-500">Detalhe técnico: {detail}</p>}
-            <button type="button" onClick={retry} autoFocus className="mt-2 inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-ink-950">
+            <button ref={retryBtn} type="button" onClick={retry} className="mt-2 inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-ink-950">
               <RotateCcw className="h-4 w-4" /> Tentar de novo
             </button>
           </div>

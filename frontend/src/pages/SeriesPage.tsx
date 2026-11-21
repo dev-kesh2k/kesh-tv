@@ -16,7 +16,7 @@ interface SeriesData {
 
 /** "Greys Anatomy [L] S01E05" → "Episódio 5"; títulos próprios do episódio ficam. */
 function episodeTitle(e: Episode, series: string) {
-  const rest = e.name.startsWith(series) ? e.name.slice(series.length).replace(/^[\s._-]*S\d+\s*[._-]?\s*E\d+[\s._:-]*/i, '').trim() : e.name;
+  const rest = e.name.startsWith(series) ? e.name.slice(series.length).replace(/^[\s._-]*S\d+\s*(?:[._-]\s*)?E\d+[\s._:-]*/i, '').trim() : e.name;
   return rest || `Episódio ${e.episode || ''}`.trim();
 }
 

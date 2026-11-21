@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { WifiOff } from 'lucide-react';
 import { useAuth } from './auth';
@@ -14,21 +15,7 @@ import SeriesPage from './pages/SeriesPage';
 export default function App() {
   const { user, ready, offline, retry } = useAuth();
   if (!ready) return <Spinner label="Carregando…" />;
-  if (!user && offline)
-    return (
-      <div className="grid min-h-[100dvh] place-items-center px-6 text-center">
-        <div className="max-w-sm">
-          <div className="mx-auto mb-4 grid place-items-center text-slate-500">
-            <WifiOff className="h-8 w-8" />
-          </div>
-          <h1 className="text-xl font-semibold">Sem conexão</h1>
-          <p className="mt-2 text-sm text-slate-400">Confira a internet do aparelho. O app tenta de novo sozinho quando a conexão voltar.</p>
-          <button type="button" onClick={retry} className="mt-5 inline-flex min-h-[48px] items-center rounded-xl bg-brand px-6 font-semibold text-ink-950" autoFocus>
-            Tentar de novo
-          </button>
-        </div>
-      </div>
-    );
+  if (!user && offline) return <Offline retry={retry} />;
   if (!user) return <Login />;
   return (
     <Routes>
@@ -43,5 +30,27 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
+  );
+}
+
+/** Tela sem conexão; o foco começa em "Tentar de novo" (controle remoto da TV). */
+function Offline({ retry }: { retry: () => void }) {
+  const btn = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    btn.current?.focus();
+  }, []);
+  return (
+    <div className="grid min-h-[100dvh] place-items-center px-6 text-center">
+      <div className="max-w-sm">
+        <div className="mx-auto mb-4 grid place-items-center text-slate-500">
+          <WifiOff className="h-8 w-8" />
+        </div>
+        <h1 className="text-xl font-semibold">Sem conexão</h1>
+        <p className="mt-2 text-sm text-slate-400">Confira a internet do aparelho. O app tenta de novo sozinho quando a conexão voltar.</p>
+        <button ref={btn} type="button" onClick={retry} className="mt-5 inline-flex min-h-[48px] items-center rounded-xl bg-brand px-6 font-semibold text-ink-950">
+          Tentar de novo
+        </button>
+      </div>
+    </div>
   );
 }

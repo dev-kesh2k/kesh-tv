@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../auth';
 import { Logo } from '../components/Layout';
 import { btnPrimary, ErrorBox, input } from '../components/ui';
@@ -9,6 +9,10 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const emailRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    emailRef.current?.focus();
+  }, []);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -31,14 +35,14 @@ export default function Login() {
         <div className="mt-8 space-y-4">
           <label className="block">
             <span className="mb-1.5 block text-sm text-slate-400">E-mail</span>
-            <input className={input} type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
+            <input className={input} type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required ref={emailRef} />
           </label>
           <label className="block">
             <span className="mb-1.5 block text-sm text-slate-400">Senha</span>
             <input className={input} type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
           </label>
           <ErrorBox message={error} />
-          <button className={`${btnPrimary} w-full`} disabled={busy}>
+          <button type="submit" className={`${btnPrimary} w-full`} disabled={busy}>
             {busy ? 'Entrando…' : 'Entrar'}
           </button>
         </div>

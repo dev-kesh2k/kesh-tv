@@ -62,7 +62,7 @@ function AddForm({ onDone, onCancel }: { onDone: () => void; onCancel?: () => vo
       {mode === 'url' ? (
         <label className="block">
           <span className="mb-1 block text-xs font-medium text-slate-400">Link da lista M3U</span>
-          <input className={input} type="url" inputMode="url" required value={url} onChange={(e) => setUrl(e.target.value)} placeholder="http://servidor/get.php?username=…&type=m3u_plus" />
+          <input className={input} type="url" inputMode="url" required value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://servidor/get.php?username=…&type=m3u_plus" />
           <span className="mt-1 block text-xs text-slate-500">Atualizada sozinha 1× por dia.</span>
         </label>
       ) : (
@@ -73,7 +73,7 @@ function AddForm({ onDone, onCancel }: { onDone: () => void; onCancel?: () => vo
         </label>
       )}
       <ErrorBox message={error} />
-      <button className={`${btnPrimary} w-full sm:w-auto`} disabled={busy}>
+      <button type="submit" className={`${btnPrimary} w-full sm:w-auto`} disabled={busy}>
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} {busy ? 'Enviando…' : 'Adicionar'}
       </button>
     </form>
@@ -153,7 +153,7 @@ function PlaylistCard({ pl, onChanged }: { pl: Playlist; onChanged: () => void }
           <input className={input} value={name} maxLength={80} required onChange={(e) => setName(e.target.value)} placeholder="Nome" />
           {pl.url && <input className={input} type="url" required value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Link da lista" />}
           <div className="flex flex-wrap gap-2">
-            <button className={btnPrimary} disabled={busy}>
+            <button type="submit" className={btnPrimary} disabled={busy}>
               Salvar
             </button>
             <button type="button" className={btnGhost} onClick={() => setEditing(false)}>
