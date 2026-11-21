@@ -1,7 +1,18 @@
 // Validação dos campos recebidos pelas rotas (sem consulta ao banco: testável).
 import { HttpError } from './db.js';
 
-export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/**
+ * E-mail no formato "algo@dominio.tld": um só @, sem espaços, parte local não vazia e um ponto no domínio
+ * que não seja o primeiro nem o último caractere (mesma regra de /^[^\s@]+@[^\s@]+\.[^\s@]+$/, sem retrocesso).
+ */
+export function isEmail(v) {
+  const s = String(v);
+  if (/\s/.test(s)) return false;
+  const at = s.indexOf('@');
+  if (at <= 0 || at !== s.lastIndexOf('@')) return false;
+  const domain = s.slice(at + 1);
+  return domain.length >= 3 && domain.slice(1, -1).includes('.');
+}
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 export const KINDS = ['live', 'movie', 'series'];
 

@@ -8,7 +8,11 @@ COPY package.json package-lock.json ./
 COPY prisma ./prisma
 RUN npm ci --no-audit --no-fund && npx prisma generate
 COPY src ./src
+# Legível pelo usuário sem root mesmo se a cópia local vier com arquivos 600.
+RUN chmod -R a+rX package.json src prisma
 ENV NODE_ENV=production PORT=4000
+# Roda sem root (só escreve em /tmp, nas conversões do ffmpeg).
+USER node
 EXPOSE 4000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||4000)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"

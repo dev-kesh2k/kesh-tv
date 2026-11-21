@@ -8,7 +8,7 @@ export function decodeXml(s) {
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
     .replace(/&(#x[0-9a-f]+|#\d+|\w+);/gi, (m, e) => {
       if (e[0] === '#') {
-        const code = e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
+        const code = e[1] === 'x' || e[1] === 'X' ? Number.parseInt(e.slice(2), 16) : Number.parseInt(e.slice(1), 10);
         return Number.isFinite(code) ? String.fromCodePoint(code) : m;
       }
       return ENTITIES[e.toLowerCase()] ?? m;

@@ -1,9 +1,10 @@
+import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { prisma } from './db.js';
 
 const SECRET = process.env.JWT_SECRET || '';
 if (!SECRET) console.warn('JWT_SECRET não definido: usando segredo temporário (sessões caem ao reiniciar).');
-const KEY = SECRET || `tmp-${Math.random().toString(36).slice(2)}${Date.now()}`;
+const KEY = SECRET || `tmp-${crypto.randomBytes(24).toString('hex')}`;
 
 // O token leva a "versão" da senha: trocar a senha (ou sair de todos os aparelhos) invalida os tokens antigos.
 export function signToken(user) {
