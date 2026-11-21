@@ -39,6 +39,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # SonarQube deste servidor (token só no servidor): bug ou falha de segurança no código novo barra o deploy.
+      - name: Análise SonarQube
+        run: bash "/opt/hub/scripts/sonar-scan.sh" "$SLUG"
+
       # Cópia de entrega: o Hub publica daqui e a pasta de trabalho do Criador não é tocada.
       - name: Sincronizar código com o Hub
         run: |
