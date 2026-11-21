@@ -75,7 +75,7 @@ function Users({ me }: { me: User }) {
         <input className={input} placeholder="Nome" required maxLength={80} value={name} onChange={(e) => setName(e.target.value)} />
         <input className={input} placeholder="E-mail" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         <input className={input} placeholder="Senha (mín. 8)" type="password" autoComplete="new-password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
-        <button className={btnGhost} disabled={f.busy}>
+        <button type="submit" className={btnGhost} disabled={f.busy}>
           <UserPlus className="h-4 w-4" /> Criar usuário
         </button>
         <div className="sm:col-span-2">
@@ -216,7 +216,7 @@ export default function Account() {
 
   const saveName = (e: FormEvent) => {
     e.preventDefault();
-    profile.run(async () => setUser((await api.put<{ user: User }>('auth/profile', { name })).user), 'Nome salvo');
+    void profile.run(async () => setUser((await api.put<{ user: User }>('auth/profile', { name })).user), 'Nome salvo');
   };
   const savePass = async (e: FormEvent) => {
     e.preventDefault();
@@ -246,7 +246,7 @@ export default function Account() {
           <input className={input} value={name} required maxLength={80} onChange={(e) => setName(e.target.value)} />
           <ErrorBox message={profile.error} />
           <Ok text={profile.ok} />
-          <button className={btnPrimary} disabled={profile.busy}>
+          <button type="submit" className={btnPrimary} disabled={profile.busy}>
             Salvar nome
           </button>
         </form>
@@ -257,7 +257,7 @@ export default function Account() {
           <input className={input} type="password" autoComplete="new-password" placeholder="Nova senha (mín. 8)" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
           <ErrorBox message={pass.error} />
           <Ok text={pass.ok} />
-          <button className={btnPrimary} disabled={pass.busy}>
+          <button type="submit" className={btnPrimary} disabled={pass.busy}>
             Trocar senha
           </button>
         </form>

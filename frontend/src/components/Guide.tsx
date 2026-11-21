@@ -15,12 +15,12 @@ export function Guide({ channelId }: { channelId: string }) {
         .get<{ programmes: Programme[] }>(`channels/${channelId}/epg`)
         .then((r) => alive && setList(r.programmes))
         .catch(() => alive && setList([]));
-    load();
+    void load();
     const t = window.setInterval(() => {
       setTick((n) => n + 1);
       // Recarrega quando o programa atual acabou.
       setList((cur) => {
-        if (cur?.[0] && Date.parse(cur[0].stop) <= Date.now()) load();
+        if (cur?.[0] && Date.parse(cur[0].stop) <= Date.now()) void load();
         return cur;
       });
     }, 60_000);
