@@ -6,6 +6,9 @@ RUN npm ci --no-audit --no-fund
 COPY frontend/ ./
 RUN npx vite build --base /
 
-FROM nginx:1.27-alpine
+# Imagem oficial do nginx que roda sem root (escuta na 8080).
+FROM nginxinc/nginx-unprivileged:1.27-alpine
 COPY deploy/docker/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /web/dist /usr/share/nginx/html
+USER 101
+EXPOSE 8080
