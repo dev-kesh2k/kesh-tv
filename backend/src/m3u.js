@@ -3,7 +3,38 @@
 /** Texto para busca: minúsculas e sem acentos ("Ação" acha com "acao"). */
 export const normalizeSearch = (s) => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
-const ATTR_RE = /([A-Za-z0-9_-]+)="([^"]*)"/g;
+const isAttrNameChar = (c) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c === '_' || c === '-';
+
+/** Pares nome="valor" da linha (como /([A-Za-z0-9_-]+)="([^"]*)"/g, sem regex com retrocesso): [[nome, valor], ...]. */
+export function parseAttrs(line) {
+  const out = [];
+  let pos = 0;
+  for (;;) {
+    const eq = line.indexOf('="', pos);
+    if (eq < 0) break;
+    let start = eq;
+    while (start > pos && isAttrNameChar(line[start - 1])) start--;
+    if (start === eq) {
+      pos = eq + 1;
+      continue;
+    }
+    const close = line.indexOf('"', eq + 2);
+    if (close < 0) break;
+    out.push([line.slice(start, eq), line.slice(eq + 2, close)]);
+    pos = close + 1;
+  }
+  return out;
+}
+
+/** Tira do fim os caracteres para os quais `drop(c)` é verdadeiro. */
+function trimEndWhere(s, drop) {
+  let end = s.length;
+  while (end > 0 && drop(s[end - 1])) end--;
+  return s.slice(0, end);
+}
+const isEpisodeSep = (c) => /[\s._-]/.test(c);
+const isNameTail = (c) => /[\s:|–-]/.test(c);
+const EPISODE_RE = /\bS(\d{1,3})\s*(?:[._-]\s*)?E(\d{1,4})\b/i;
 
 /**
  * Tipo do item. O link manda primeiro (Xtream: /movie/, /series/, /live/ ou .ts/.m3u8 = ao vivo);
@@ -23,9 +54,11 @@ export function classify(url, group) {
 
 /** Separa "Nome da Série S02E05" em { seriesName, season, episode }. */
 export function splitEpisode(title) {
-  const m = String(title).match(/^(.*?)[\s._-]*\bS(\d{1,3})\s*[._-]?\s*E(\d{1,4})\b/i);
-  if (!m || !m[1].trim()) return { seriesName: '', season: 0, episode: 0 };
-  return { seriesName: m[1].trim().replace(/[\s:|–-]+$/, '').slice(0, 200), season: Number(m[2]), episode: Number(m[3]) };
+  const t = String(title);
+  const m = EPISODE_RE.exec(t);
+  const name = m ? trimEndWhere(t.slice(0, m.index), isEpisodeSep).trim() : '';
+  if (!name) return { seriesName: '', season: 0, episode: 0 };
+  return { seriesName: trimEndWhere(name, isNameTail).slice(0, 200), season: Number(m[1]), episode: Number(m[2]) };
 }
 
 /**
@@ -50,13 +83,13 @@ export function createParser({ dedupe = true } = {}) {
       const line = raw.trim();
       if (!line) return null;
       if (line.startsWith('#EXTM3U')) {
-        for (const m of line.matchAll(ATTR_RE)) header[m[1].toLowerCase()] = m[2].trim();
+        for (const [k, v] of parseAttrs(line)) header[k.toLowerCase()] = v.trim();
         return null;
       }
       if (line.startsWith('#EXTINF')) {
         const comma = findTitleComma(line);
         const attrs = {};
-        for (const m of (comma >= 0 ? line.slice(0, comma) : line).matchAll(ATTR_RE)) attrs[m[1].toLowerCase()] = m[2].trim();
+        for (const [k, v] of parseAttrs(comma >= 0 ? line.slice(0, comma) : line)) attrs[k.toLowerCase()] = v.trim();
         info = { attrs, title: comma >= 0 ? line.slice(comma + 1).trim() : '' };
         return null;
       }

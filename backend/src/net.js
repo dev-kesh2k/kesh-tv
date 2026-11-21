@@ -34,19 +34,29 @@ export function verify(q) {
   return { url: unb64(u), ua: extra.ua || '', ref: extra.ref || '' };
 }
 
+/** IPv4 no fim do texto ("::ffff:1.2.3.4" → "1.2.3.4"), sem regex com retrocesso; '' se não houver. */
+function trailingIpv4(v) {
+  let i = v.length;
+  while (i > 0 && (v[i - 1] === '.' || (v[i - 1] >= '0' && v[i - 1] <= '9'))) i--;
+  const parts = v.slice(i).split('.');
+  if (parts.length < 4) return '';
+  const last = parts.slice(-4);
+  return last.every((p) => p.length > 0) ? last.join('.') : '';
+}
+
 /** Expande um IPv6 para 8 grupos de 16 bits (aceita "::" e IPv4 no final, ex.: ::ffff:1.2.3.4). */
 function ipv6Groups(ip) {
   let v = ip.toLowerCase().split('%')[0];
-  const dotted = v.match(/(\d+\.\d+\.\d+\.\d+)$/);
+  const dotted = trailingIpv4(v);
   if (dotted) {
-    const [a, b, c, d] = dotted[1].split('.').map(Number);
-    v = v.slice(0, -dotted[1].length) + `${((a << 8) | b).toString(16)}:${((c << 8) | d).toString(16)}`;
+    const [a, b, c, d] = dotted.split('.').map(Number);
+    v = v.slice(0, -dotted.length) + `${((a << 8) | b).toString(16)}:${((c << 8) | d).toString(16)}`;
   }
   const [head, tail] = v.split('::');
   const h = head ? head.split(':') : [];
   const t = tail !== undefined && tail ? tail.split(':') : [];
   const fill = tail !== undefined ? Array(8 - h.length - t.length).fill('0') : [];
-  return [...h, ...fill, ...t].map((g) => parseInt(g || '0', 16));
+  return [...h, ...fill, ...t].map((g) => Number.parseInt(g || '0', 16));
 }
 
 export function blockedIp(ip) {

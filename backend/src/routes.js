@@ -1,7 +1,7 @@
 import express, { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma, HttpError } from './db.js';
-import { EMAIL_RE, hostName, kindOf, listUrl, password, text, uuid } from './validate.js';
+import { hostName, isEmail, kindOf, listUrl, password, text, uuid } from './validate.js';
 import { signToken, publicUser, requireAuth, tooManyAttempts, recordFailure, clearFailures, clientIp } from './auth.js';
 import { expandXtreamSeries, startSync } from './sync.js';
 import { SERIES_MARK } from './xtream.js';
@@ -116,7 +116,7 @@ api.get('/users', requireAdmin, wrap(async (_req, res) => {
 api.post('/users', requireAdmin, wrap(async (req, res) => {
   const name = text(req.body?.name, 'Nome', { max: 80, required: true });
   const email = text(req.body?.email, 'E-mail', { max: 160, required: true }).toLowerCase();
-  if (!EMAIL_RE.test(email)) throw new HttpError(400, 'E-mail inválido');
+  if (!isEmail(email)) throw new HttpError(400, 'E-mail inválido');
   const pass = password(req.body?.password);
   if (await prisma.user.findUnique({ where: { email } })) throw new HttpError(409, 'Já existe um usuário com este e-mail');
   const user = await prisma.user.create({ data: { name, email, role: 'user', passwordHash: await bcrypt.hash(pass, 10) } });

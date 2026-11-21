@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { HttpError } from '../src/db.js';
-import { EMAIL_RE, hostName, kindOf, listUrl, password, text, uuid } from '../src/validate.js';
+import { hostName, isEmail, kindOf, listUrl, password, text, uuid } from '../src/validate.js';
 
 const erro = (status, re) => (e) => e instanceof HttpError && e.status === status && re.test(e.message);
 
@@ -37,11 +37,11 @@ test('hostName: servidor do link sem www e nome padrão', () => {
   assert.equal(hostName('não é link'), 'Minha lista');
 });
 
-test('kindOf e EMAIL_RE', () => {
+test('kindOf e isEmail', () => {
   assert.equal(kindOf('movie'), 'movie');
   assert.equal(kindOf('series'), 'series');
   assert.equal(kindOf('qualquer'), 'live');
   assert.equal(kindOf(undefined), 'live');
-  assert.ok(EMAIL_RE.test('a@b.com'));
-  assert.ok(!EMAIL_RE.test('a@b'));
+  assert.ok(isEmail('a@b.com'));
+  assert.ok(!isEmail('a@b'));
 });

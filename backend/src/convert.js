@@ -19,12 +19,16 @@ const IDLE_MS = 3 * 60_000;
 const sessions = new Map();
 const probes = new Map();
 
+// Caminhos absolutos (não depende do PATH); FFMPEG_PATH muda o do ffmpeg fora do contêiner.
+const FFMPEG = process.env.FFMPEG_PATH || '/usr/bin/ffmpeg';
+const NICE = '/usr/bin/nice';
+
 fs.rmSync(ROOT, { recursive: true, force: true });
 fs.mkdirSync(ROOT, { recursive: true });
 
 function run(args, timeoutMs) {
   return new Promise((resolve) => {
-    const p = spawn('ffmpeg', args, { stdio: ['ignore', 'ignore', 'pipe'] });
+    const p = spawn(FFMPEG, args, { stdio: ['ignore', 'ignore', 'pipe'] });
     let err = '';
     p.stderr.on('data', (d) => {
       if (err.length < 20000) err += d;
@@ -123,13 +127,13 @@ async function probe(url, ua, ref) {
   if (!info || !info.duration) {
     const err = await run(['-hide_banner', '-nostdin', ...headerArgs(ua, ref), '-i', url], 40000);
     const d = err.match(/Duration: (\d+):(\d+):(\d+(?:\.\d+)?)/);
-    const video = err.match(/Stream #\d+:\d+[^:]*: Video: (\w+)/);
+    const video = err.match(/Stream #\d+:\d[^:]*: Video: (\w+)/);
     if (!video) throw new HttpError(422, 'Não consegui ler este arquivo (fora do ar ou formato desconhecido)');
     info = {
       vcodec: video[1],
       pix: (err.match(/Video: [^\n]*?\b(yuv\w+|nv12|gray\w*)/) || [])[1] || '',
       duration: d ? Number(d[1]) * 3600 + Number(d[2]) * 60 + Number(d[3]) : 0,
-      hasAudio: /Stream #\d+:\d+[^:]*: Audio:/.test(err),
+      hasAudio: /Stream #\d+:\d[^:]*: Audio:/.test(err),
     };
   }
   info.at = Date.now();
@@ -190,7 +194,7 @@ export async function startConversion({ url, ua, ref, offset, userId }) {
     '-f', 'hls', '-hls_time', String(SEG), '-hls_list_size', '0', '-hls_playlist_type', 'event',
     '-hls_segment_filename', path.join(dir, 's%05d.ts'), path.join(dir, 'index.m3u8'),
   ];
-  const proc = spawn('nice', ['-n', '10', 'ffmpeg', ...args], { stdio: ['ignore', 'ignore', 'pipe'] });
+  const proc = spawn(NICE, ['-n', '10', FFMPEG, ...args], { stdio: ['ignore', 'ignore', 'pipe'] });
   const s = { sid, dir, proc, userId, copy, last: Date.now(), wanted: 0, paused: false, done: false, error: '' };
   proc.stderr.on('data', (d) => {
     if (s.error.length < 4000) s.error += d;

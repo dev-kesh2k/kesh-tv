@@ -285,7 +285,7 @@ export function startAutoRefresh() {
       running = false;
     }
   };
-  setTimeout(tick, 60_000 + Math.random() * 60_000);
+  setTimeout(tick, 60_000 + crypto.randomInt(60_000));
   setInterval(tick, 30 * 60_000).unref();
 }
 

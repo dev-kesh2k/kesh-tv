@@ -9,8 +9,15 @@ app.set('trust proxy', 'loopback');
 app.disable('x-powered-by');
 app.use((req, res, next) => (/\/(playlists\/upload|favorites\/import)$/.test(req.path) ? next() : express.json({ limit: '200kb' })(req, res, next)));
 
+/** Tira as barras do fim (sem regex com retrocesso). */
+function trimTrailingSlashes(s) {
+  let end = s.length;
+  while (end > 0 && s[end - 1] === '/') end--;
+  return s.slice(0, end);
+}
+
 // O proxy pode repassar /api/..., o caminho completo /<slug>/api/... ou já sem o prefixo.
-const publicPath = String(process.env.PUBLIC_PATH || '').replace(/\/+$/, '');
+const publicPath = trimTrailingSlashes(String(process.env.PUBLIC_PATH || ''));
 // É este /health que o Hub enxerga (o Traefik tira o prefixo /kesh-tv/api): 503 quando o Postgres não responde.
 app.get(['/health', `${publicPath}/health`], async (_req, res) => {
   const started = Date.now();
